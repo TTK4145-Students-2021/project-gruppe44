@@ -131,25 +131,40 @@ func main() {
 			fmt.Printf("Received: %#v\n", a)
 
 		case o := <-orderRx:
-			fmt.Printf("Recieved request to send cost function \n") //an order happens everyone do this
+			fmt.Printf("Recieved request to send cost function from" + id + "\n") //an order happens everyone do this
 			myCost := costFunction(o, thisElevator)
 			costTx <- myCost
-
+			fmt.Printf("my cost is: %v\n", myCost)
 			takeThisOrder := true
-			time.Sleep(1 * time.Second) // give time for everyone to send their cost
-			for len(costRx) > 0 {
-				recievedCost := <-costRx
-				if recievedCost < myCost {
-					takeThisOrder = false
+			//time.Sleep(1 * time.Second) // give time for everyone to send their cost
+		L:
+			for {
+				select {
+				case recievedCost := <-costRx:
+					fmt.Printf("recieved cost: %v\n", recievedCost)
+					if recievedCost < myCost {
+						takeThisOrder = false
+					}
+				default:
+					break L
 				}
 			}
+			/*
+				for len(costRx) > 0 {
+					recievedCost := <-costRx
+					fmt.Printf("recieved cost: %v\n", recievedCost)
+					if recievedCost < myCost {
+						takeThisOrder = false
+					}
+				}
+			*/
 			if takeThisOrder {
 				thisElevator.CurrentOrders = append(thisElevator.CurrentOrders, o) //add order if cost is smallest
 				fmt.Printf("Took order: %#v\n", o)
 				//fmt.Printf("current status:  %#v\n", thisElevator)
 				//send confirmation to others?
 			} else {
-				fmt.Printf("didn't take order")
+				fmt.Printf("didn't take order\n")
 			}
 		}
 		/*

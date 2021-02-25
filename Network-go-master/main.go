@@ -1,13 +1,15 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"math/rand"
+	"os"
+	"time"
+
 	"./network/bcast"
 	"./network/localip"
 	"./network/peers"
-	"flag"
-	"fmt"
-	"os"
-	"time"
 )
 
 // We define some custom struct to send over the network.
@@ -16,6 +18,35 @@ import (
 type HelloMsg struct {
 	Message string
 	Iter    int
+}
+
+//Order for
+type Order struct {
+	Floor     int
+	Direction int // 0 for directionless ( inside order) 1 for up, 2 for down (outside orders)
+
+}
+
+//ElevatorStatus contains array of orders, current floor and direction
+type ElevatorStatus struct {
+	CurrentOrders []Order
+	Direction     int
+	CurrentFloor  int
+}
+
+type SendOrder struct {
+	OrderInformation Order
+	SenderId         string //id of elevator sending the order
+	RecieverId       string //use id of elevator that should take the order, or 0 for everyone to compare their orders
+}
+type SendCost struct {
+	cost     int
+	SenderId string
+}
+
+func costFunction(order Order, elevatorStatus ElevatorStatus) int {
+	return rand.Intn(1000) //return random rumber as temp cost function
+	//return Abs(order.Floor - elevatorStatus.CurrentFloor)
 }
 
 func main() {
@@ -55,16 +86,38 @@ func main() {
 	go bcast.Transmitter(16569, helloTx)
 	go bcast.Receiver(16569, helloRx)
 
+	orderTx := make(chan Order)
+	orderRx := make(chan Order)
+	go bcast.Transmitter(33333, orderTx)
+	go bcast.Receiver(33333, orderRx)
+
+	costTx := make(chan int)
+	costRx := make(chan int)
+	go bcast.Transmitter(33333, costTx)
+	go bcast.Receiver(33333, costRx)
+
 	// The example message. We just send one of these every second.
 	go func() {
-		helloMsg := HelloMsg{"Hello from " + id, 0}
+		/*
+			helloMsg := HelloMsg{"Hello from " + id, 0}
+			for {
+				helloMsg.Iter++
+				helloTx <- helloMsg
+				time.Sleep(1 * time.Second)
+			}
+		*/
+		time.Sleep(3 * time.Second) //make orders
+		order := Order{0, 1}
 		for {
-			helloMsg.Iter++
-			helloTx <- helloMsg
-			time.Sleep(1 * time.Second)
+			order.Floor++
+			orderTx <- order
+			time.Sleep(10 * time.Second)
 		}
+		//sendOrder := SendOrder{order, "333"}
 	}()
-
+	//order1 := Order{4, 0}
+	orders1 := make([]Order, 0) //lager en dummy elevator status
+	thisElevator := ElevatorStatus{orders1, 0, 1}
 	fmt.Println("Started")
 	for {
 		select {
@@ -76,6 +129,58 @@ func main() {
 
 		case a := <-helloRx:
 			fmt.Printf("Received: %#v\n", a)
+
+		case o := <-orderRx:
+			fmt.Printf("Recieved request to send cost function \n") //an order happens everyone do this
+			myCost := costFunction(o, thisElevator)
+			costTx <- myCost
+
+			takeThisOrder := true
+			time.Sleep(1 * time.Second) // give time for everyone to send their cost
+			for len(costRx) > 0 {
+				recievedCost := <-costRx
+				if recievedCost < myCost {
+					takeThisOrder = false
+				}
+			}
+			if takeThisOrder {
+				thisElevator.CurrentOrders = append(thisElevator.CurrentOrders, o) //add order if cost is smallest
+				fmt.Printf("Took order: %#v\n", o)
+				//fmt.Printf("current status:  %#v\n", thisElevator)
+				//send confirmation to others?
+			} else {
+				fmt.Printf("didn't take order")
+			}
 		}
+		/*
+			case o := <-orderRx:
+				if o.RecieverId == id {
+					fmt.Printf("Received my order %#v\n", o) // add to order list
+				} else if o.RecieverId == "" {
+					fmt.Printf("Recieved request to send cost function %#v\n", o)
+					myCost := costFunction(o.OrderInformation, thisElevator)
+					costTx <- myCost
+					takeThisOrder := true
+					time.Sleep(1 * time.Second) // give time for everyone to send their cost
+					for len(costRx) > 0 {
+						recievedCost := <-costRx
+						if recievedCost < myCost {
+							takeThisOrder = false
+						}
+					}
+					if takeThisOrder {
+						thisElevator.CurrentOrders = append(thisElevator.CurrentOrders, o.OrderInformation) //add order if cost is smallest
+						fmt.Printf("Took order: %#v\n", o)
+						fmt.Printf("current status:  %#v\n", thisElevator)
+						//send confirmation to others?
+
+					}
+
+				} else {
+					fmt.Printf("Recieved someone elses order %#v\n", o)
+
+				}
+			}
+		*/
 	}
 }

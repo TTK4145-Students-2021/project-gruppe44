@@ -93,8 +93,8 @@ func main() {
 
 	costTx := make(chan int)
 	costRx := make(chan int)
-	go bcast.Transmitter(33333, costTx)
-	go bcast.Receiver(33333, costRx)
+	go bcast.Transmitter(33334, costTx)
+	go bcast.Receiver(33334, costRx)
 
 	// The example message. We just send one of these every second.
 	go func() {
@@ -136,7 +136,7 @@ func main() {
 			costTx <- myCost
 			fmt.Printf("my cost is: %v\n", myCost)
 			takeThisOrder := true
-			//time.Sleep(1 * time.Second) // give time for everyone to send their cost
+			//time.Sleep(3 * time.Second) // give time for everyone to send their cost
 		L:
 			for {
 				select {

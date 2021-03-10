@@ -22,7 +22,7 @@ type ElevatorStatus struct {
 	Direction  elevio.MotorDirection
 }
 
-func ElevatorStatusUpdateForever(order <-chan elevio.ButtonEvent, direction <-chan elevio.MotorDirection, floor <-chan int, clear <-chan bool, elevatorCH chan<- ElevatorStatus) {
+func ElevatorStatusUpdateForever(order <-chan elevio.ButtonEvent, direction <-chan elevio.MotorDirection, floor <-chan int, clear <-chan bool, elevatorCH chan<- ElevatorStatus, ordersCH chan<- Orders) {
 	myOrders := Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}}
 	//load orders from fil
 	//var currentDir elevio.MotorDirection = elevio.MD_Stop
@@ -45,12 +45,14 @@ func ElevatorStatusUpdateForever(order <-chan elevio.ButtonEvent, direction <-ch
 			elevator = ElevatorAddOrder(o, elevator)
 			elevator.Endstation = ElevatorGetEndstation(elevator)
 			elevatorCH <- elevator
+			ordersCH <- elevator.Orders
 			fmt.Println(elevator)
 		case <-clear:
 			fmt.Println("removed orders")
 			ElevatorClearOrdersAtFloor(elevator)
 			elevator.Endstation = ElevatorGetEndstation(elevator)
 			elevatorCH <- elevator
+			ordersCH <- elevator.Orders
 			fmt.Println(elevator)
 		}
 	}

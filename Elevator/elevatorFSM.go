@@ -32,6 +32,7 @@ func main() {
 	directionCH := make(chan elevio.MotorDirection, 10)
 	clearCH := make(chan bool, 10)
 	elevatorCH := make(chan elevhandler.ElevatorStatus, 10)
+	ordersCH := make(chan elevhandler.Orders, 10)
 
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
@@ -39,7 +40,8 @@ func main() {
 	go elevio.PollStopButton(drv_stop)
 
 	go elevio.PollFloorSensor(floorCH)
-	go elevhandler.ElevatorStatusUpdateForever(drv_buttons, directionCH, floorCH, clearCH, elevatorCH)
+	go elevhandler.ElevatorStatusUpdateForever(drv_buttons, directionCH, floorCH, clearCH, elevatorCH, ordersCH)
+	go updateOrderLights(ordersCH)
 	//go fix lights elns
 	elevator = <-elevatorCH
 	state := "idle_state"
@@ -112,7 +114,7 @@ func moving(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, 
 			elevator = e
 		case f := <-drv_floors:
 			switch elevator.Direction {
-			case elevio.MD_Up:
+			case elevio.MD_Up: //fiks denne iffen slik at retningen blir rett test down f 3, så inside 1 og 4 samtidig den skal gå ned
 				if elevator.Orders.Up[f] || elevator.Orders.Inside[f] || elevator.Endstation == f {
 					return "stop_up_state"
 				}
@@ -151,12 +153,12 @@ func stop(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, dr
 			}
 		case <-timer.C:
 			elevio.SetDoorOpenLamp(false)
-			if elevator.Endstation == elevator.Floor {
-				return "idle_state"
-			} else if elevator.Endstation > elevator.Floor {
+			if direction == elevio.MD_Up && elevator.Endstation > elevator.Floor {
 				return "moving_up_state"
-			} else if elevator.Endstation < elevator.Floor {
+			} else if direction == elevio.MD_Down && elevator.Endstation < elevator.Floor {
 				return "moving_down_state"
+			} else {
+				return "idle_state"
 			}
 		}
 	}
@@ -164,5 +166,19 @@ func stop(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, dr
 
 func emergency_stop() string {
 	return "idle_state" //fiks senere
+
+}
+
+func updateOrderLights(orders <-chan elevhandler.Orders) {
+	for {
+		select {
+		case o := <-orders:
+			for f := 0; f < len(o.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
+				elevio.SetButtonLamp(elevio.BT_Cab, f, o.Inside[f])
+				elevio.SetButtonLamp(elevio.BT_HallUp, f, o.Up[f])
+				elevio.SetButtonLamp(elevio.BT_HallDown, f, o.Down[f])
+			}
+		}
+	}
 
 }

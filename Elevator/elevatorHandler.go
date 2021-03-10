@@ -27,13 +27,18 @@ func ElevatorStatusUpdateForever(order <-chan elevio.ButtonEvent, direction <-ch
 		select {
 		case d := <-direction:
 			elevator.direction = d
+			elevatorCH <- elevator
 		case f := <-floor:
 			elevator.floor = f
+			elevatorCH <- elevator
 		case o := <-order:
 			elevator = ElevatorAddOrder(o, elevator)
 			elevator.endstation = ElevatorGetEndstation(elevator)
+			elevatorCH <- elevator
 		case <-stop:
 			ElevatorClearOrdersAtFloor(elevator)
+			elevator.endstation = ElevatorGetEndstation(elevator)
+			elevatorCH <- elevator
 		}
 	}
 

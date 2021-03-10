@@ -1,4 +1,4 @@
-package orders
+package elevhandler
 
 import "./elevio"
 
@@ -18,7 +18,7 @@ type ElevatorStatus struct {
 	direction  elevio.MotorDirection
 }
 
-func ElevatorStatusUpdateForever(order <-chan elevio.ButtonEvent, direction <-chan elevio.MotorDirection, floor <-chan int, stop <-chan bool, elevatorCH chan<- ElevatorStatus) {
+func ElevatorStatusUpdateForever(order <-chan elevio.ButtonEvent, direction <-chan elevio.MotorDirection, floor <-chan int, clear <-chan bool, elevatorCH chan<- ElevatorStatus) {
 	myOrders := Orders{inside: []bool{false, false, false, false}, up: []bool{false, false, false, false}, down: []bool{false, false, false, false}}
 	//load orders from fil
 	//var currentDir elevio.MotorDirection = elevio.MD_Stop
@@ -35,7 +35,7 @@ func ElevatorStatusUpdateForever(order <-chan elevio.ButtonEvent, direction <-ch
 			elevator = ElevatorAddOrder(o, elevator)
 			elevator.endstation = ElevatorGetEndstation(elevator)
 			elevatorCH <- elevator
-		case <-stop:
+		case <-clear:
 			ElevatorClearOrdersAtFloor(elevator)
 			elevator.endstation = ElevatorGetEndstation(elevator)
 			elevatorCH <- elevator

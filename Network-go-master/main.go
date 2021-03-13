@@ -13,8 +13,8 @@ import (
 )
 
 // We define some custom struct to send over the network.
-// Note that all members we want to transmit must be public. Any private members
-//  will be received as zero-values.
+// Note that all members we want to transmit must be public.
+// Any private members will be received as zero-values.
 type HelloMsg struct {
 	Message string
 	Iter    int
@@ -69,7 +69,7 @@ func main() {
 	}
 
 	// We make a channel for receiving updates on the id's of the peers that are
-	//  alive on the network
+	// alive on the network
 	peerUpdateCh := make(chan peers.PeerUpdate)
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
@@ -82,7 +82,7 @@ func main() {
 	helloRx := make(chan HelloMsg)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
-	//  start multiple transmitters/receivers on the same port.
+	// start multiple transmitters/receivers on the same port.
 	go bcast.Transmitter(16569, helloTx)
 	go bcast.Receiver(16569, helloRx)
 

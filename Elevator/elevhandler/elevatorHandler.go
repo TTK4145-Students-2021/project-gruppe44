@@ -15,6 +15,21 @@ type Orders struct {
 	Down   []bool /** < The downwards orders from outside */
 }
 
+/*
+type Order struct {
+	id string // empty if no one has taken it
+	timeStarted int
+
+
+}
+type OrdersAll struct {
+	Inside []Order // < The inside panel orders
+	Up     []Order // < The upwards orders from outside
+	Down   []Order // < The downwards orders from outside
+}
+
+ordersAll.Up = [0, "heis1", "heis2"]
+*/
 type ElevatorStatus struct {
 	Endstation int
 	Orders     Orders

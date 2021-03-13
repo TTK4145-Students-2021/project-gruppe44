@@ -123,7 +123,6 @@ func moving(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, 
 					return "stop_down_state"
 				}
 			}
-
 		}
 	}
 }

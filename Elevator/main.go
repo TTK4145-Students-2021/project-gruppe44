@@ -3,8 +3,10 @@ package main
 import (
   "fmt"
 
+  "./elevhandler"
   "./elevio"
   "./initlights"
+  "./orderhandler"
 )
 
 func main(){

@@ -2,7 +2,6 @@ package initlights
 
 import (
 	"fmt"
-
 	"../elevio"
 )
 
@@ -13,15 +12,7 @@ func ClearAllOrderLights(numFloors int) {
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
 	}
 }
-/*
-func SigintHandler(sig int) {
-	//(void)(sig)
-	fmt.Printf("Terminating elevator\n")
-	elevio.SetMotorDirection(elevio.MD_Stop)
-}
-*/
 
-//
 func InitializeLights(addr string, numFloors int) {
 	elevio.Init(addr, numFloors)
 	ClearAllOrderLights(numFloors)

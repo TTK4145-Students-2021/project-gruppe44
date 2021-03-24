@@ -11,6 +11,13 @@ import (
 
 func main(){
 
+    // Test of CostFunc
+    BE := elevio.ButtonEvent{Floor: 3,Button: 1}
+    ES := elevhandler.ElevatorStatus{Endstation: 4, Orders: elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}},Floor: 1,Direction: 1}
+
+    fmt.Printf("Costfunction value: %d\n", orderhandler.CostFunction(BE, ES))
+
+
     numFloors := 4
     addr := "localhost:15657"
 

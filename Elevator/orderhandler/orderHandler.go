@@ -8,10 +8,30 @@ import (
 	"../elevhandler"
 )
 
+
+// type ButtonEvent struct {
+// 	Floor  int			(1,2,3,4,...)		- etasje til person
+// 	Button ButtonType	(up,down,cabcall)	- outside/cabcall=inside
+// }
+
+// type ElevatorStatus struct {
+// 	Endstation int
+// 	Orders     Orders
+// 	Floor      int
+// 	Direction  elevio.MotorDirection
+// }
+
+// // Det EN heis skal gjøre
+// type Orders struct {
+// 	Inside []bool /** < The inside panel orders*/
+// 	Up     []bool /** < The upwards orders from outside */
+// 	Down   []bool /** < The downwards orders from outside */
+// }
+	
+
 // TODO:
 // Might have to add a condition in CostFunction where: elevStatus.Floor == orderReq.Floor
-
-
+			
 // We assume that the person waits for the assigned elevator
 func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorStatus) int {
 	

@@ -31,8 +31,13 @@ import (
 
 // TODO:
 // Might have to add a condition in CostFunction where: elevStatus.Floor == orderReq.Floor
+// Find out what cab call do
+
+// NOTE: testbranch vs. master
 			
 // We assume that the person waits for the assigned elevator
+// Temporarily using elevStatus.Direction for directions, might add a new variable to elevStatus 
+// keeping track of direction while stopping at floor and until it changes direction
 func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorStatus) int {
 	
 	distToRequest := int(math.Abs(float64(orderReq.Floor) - float64(elevStatus.Floor)))
@@ -47,7 +52,7 @@ func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorSt
 	elevDirDOWN		:= (elevStatus.Direction == elevio.MD_Down)
 	orderReqUP		:= (orderReq.Button == elevio.BT_HallUp)
 	orderReqDOWN	:= (orderReq.Button == elevio.BT_HallDown)
-	endStationUNDER	:= (elevStatus.Endstation <= orderReq.Floor)
+	endStationUNDER	:= (elevStatus.Endstation < orderReq.Floor)
 	endStationOVER	:= (elevStatus.Endstation > orderReq.Floor)
 
 	if (elevFloorUNDER) {
@@ -61,7 +66,7 @@ func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorSt
 			if (endStationUNDER){return distToRequest
 			} else				{return distTotal}
 
-		} else if (elevDirDOWN)	{return distTotal}
+		} else /*if (elevDirDOWN)*/	{return distTotal}
 	
 	} else if (elevFloorOVER) {
 		if (elevDirDOWN && orderReqUP){
@@ -74,9 +79,12 @@ func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorSt
 			if (endStationOVER)	{return distToRequest
 			} else				{return distToRequest - 1}
 
-		} else if (elevDirUP)	{return distTotal}
+		} else /*if (elevDirUP)*/	{return distTotal}
+	
+	} else {
+		if ((elevDirDOWN && orderReqDOWN) || (elevDirDOWN && orderReqDOWN)) {return -1
+		} else {return distTotal}
 	}
-	return 0 // return 0 for now (if conditions over are not met)
 }
 
 func Timer(){

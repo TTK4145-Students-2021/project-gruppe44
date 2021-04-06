@@ -37,74 +37,74 @@ type ElevatorStatus struct {
 	Direction  elevio.MotorDirection
 }
 
-func ElevatorStatusUpdateForever(order <-chan elevio.ButtonEvent, direction <-chan elevio.MotorDirection, floor <-chan int, clear <-chan bool, elevatorCH chan<- ElevatorStatus, ordersCH chan<- Orders) {
-	myOrders := Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}}
-	//load orders from fil
-	//var currentDir elevio.MotorDirection = elevio.MD_Stop
-	elevator := ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, Direction: elevio.MD_Stop}
-	elevatorCH <- elevator
+func ElevatorStatusUpdateForever(elevatorPt *ElevatorStatus, order <-chan elevio.ButtonEvent, direction <-chan elevio.MotorDirection, floor <-chan int, clear <-chan int, elevatorCH chan<- ElevatorStatus, ordersCH chan<- Orders) {
+	/*
+		myOrders := Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}}
+		//load orders from fil
+		//var currentDir elevio.MotorDirection = elevio.MD_Stop
+		elevator := ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, Direction: elevio.MD_Stop}
+		elevatorCH <- elevator
+	*/
 	for {
 		select {
+		case c := <-clear:
+			fmt.Println("removed orders")
+			ElevatorClearOrdersAtFloor(elevatorPt, c)
+			ElevatorSetEndstation(elevatorPt)
+			//elevatorCH <- elevator
+			ordersCH <- elevatorPt.Orders
+			fmt.Println(*elevatorPt)
 		case d := <-direction:
 			fmt.Println("Updated direction")
-			elevator.Direction = d
-			elevatorCH <- elevator
-			fmt.Println(elevator)
+			elevatorPt.Direction = d
+			//elevatorCH <- elevator
+			fmt.Println(*elevatorPt)
 		case f := <-floor:
 			fmt.Println("Updated floor")
-			elevator.Floor = f
-			elevatorCH <- elevator
-			fmt.Println(elevator)
+			elevatorPt.Floor = f
+			elevio.SetFloorIndicator(f)
+			//elevatorCH <- elevator
+			fmt.Println(*elevatorPt)
 		case o := <-order:
 			fmt.Println("Updated order")
-			elevator = ElevatorAddOrder(o, elevator)
-			elevator.Endstation = ElevatorGetEndstation(elevator)
-			elevatorCH <- elevator
-			ordersCH <- elevator.Orders
-			fmt.Println(elevator)
-		case <-clear:
-			fmt.Println("removed orders")
-			ElevatorClearOrdersAtFloor(elevator)
-			elevator.Endstation = ElevatorGetEndstation(elevator)
-			elevatorCH <- elevator
-			ordersCH <- elevator.Orders
-			fmt.Println(elevator)
+			ElevatorAddOrder(elevatorPt, o)
+			ElevatorSetEndstation(elevatorPt)
+			//elevatorCH <- elevator
+			ordersCH <- elevatorPt.Orders
+			fmt.Println(*elevatorPt)
 		}
 	}
 
 }
 
-func ElevatorAddOrder(order elevio.ButtonEvent, elevator ElevatorStatus) ElevatorStatus {
+func ElevatorAddOrder(elevatorPt *ElevatorStatus, order elevio.ButtonEvent) {
 	switch order.Button {
 	case elevio.BT_Cab:
-		elevator.Orders.Inside[order.Floor] = true
+		elevatorPt.Orders.Inside[order.Floor] = true
 	case elevio.BT_HallUp:
-		elevator.Orders.Up[order.Floor] = true
+		elevatorPt.Orders.Up[order.Floor] = true
 	case elevio.BT_HallDown:
-		elevator.Orders.Down[order.Floor] = true
+		elevatorPt.Orders.Down[order.Floor] = true
 	}
-	return elevator
-
 }
 
 //ElevatorGetEndstation returns endstation
-func ElevatorGetEndstation(elevator ElevatorStatus) int {
-	switch elevator.Direction {
-	case elevio.MD_Up:
+func ElevatorSetEndstation(elevatorPt *ElevatorStatus) { //fant feilen, når heisa står i ro velger den alltid ned, men kan ha en ordre i ro
+	switch elevatorPt.Direction {
+	case elevio.MD_Down: //skiftet down og up
 		for f := numFloors - 1; f >= 0; f-- {
-			if elevator.Orders.Inside[f] || elevator.Orders.Down[f] || elevator.Orders.Up[f] {
-				return f
+			if elevatorPt.Orders.Inside[f] || elevatorPt.Orders.Down[f] || elevatorPt.Orders.Up[f] {
+				elevatorPt.Endstation = f
 			}
 		}
-	case elevio.MD_Down, elevio.MD_Stop: //bias til å gå nedover
+	case elevio.MD_Up, elevio.MD_Stop: //bias til å gå nedover
 		for f := 0; f < numFloors; f++ {
-			if elevator.Orders.Inside[f] || elevator.Orders.Down[f] || elevator.Orders.Up[f] {
-				return f
+			if elevatorPt.Orders.Inside[f] || elevatorPt.Orders.Down[f] || elevatorPt.Orders.Up[f] {
+				elevatorPt.Endstation = f
 			}
 		}
 
 	}
-	return elevator.Floor
 }
 
 /*
@@ -126,9 +126,9 @@ func ElevatorGetEndstation(floor_from int, floor_to int, elevator ElevatorStatus
 }
 */
 
-func ElevatorClearOrdersAtFloor(elevator ElevatorStatus) { // evt legg til håndtering for å ikke fjerne ordre motsatt retning
-	elevator.Orders.Inside[elevator.Floor] = false
-	elevator.Orders.Up[elevator.Floor] = false
-	elevator.Orders.Down[elevator.Floor] = false
+func ElevatorClearOrdersAtFloor(elevatorPt *ElevatorStatus, floor int) { // evt legg til håndtering for å ikke fjerne ordre motsatt retning
+	elevatorPt.Orders.Inside[floor] = false
+	elevatorPt.Orders.Up[floor] = false
+	elevatorPt.Orders.Down[floor] = false
 
 }

@@ -13,26 +13,23 @@ import (
 	#define down_direction 0
 */
 
-var elevator elevhandler.ElevatorStatus
+//var elevator elevhandler.ElevatorStatus
 
 func main() {
 	numFloors := 4
 
 	elevio.Init("localhost:15657", numFloors)
 
-	//var d elevio.MotorDirection = elevio.MD_Up
-	//elevio.SetMotorDirection(d)
+	drv_buttons := make(chan elevio.ButtonEvent)
+	drv_floors := make(chan int)
+	drv_obstr := make(chan bool)
+	drv_stop := make(chan bool)
 
-	drv_buttons := make(chan elevio.ButtonEvent, 10)
-	drv_floors := make(chan int, 10)
-	drv_obstr := make(chan bool, 10)
-	drv_stop := make(chan bool, 10)
-
-	floorCH := make(chan int, 10)
-	directionCH := make(chan elevio.MotorDirection, 10)
-	clearCH := make(chan bool, 10)
-	elevatorCH := make(chan elevhandler.ElevatorStatus, 10)
-	ordersCH := make(chan elevhandler.Orders, 10)
+	floorCH := make(chan int)
+	directionCH := make(chan elevio.MotorDirection)
+	clearCH := make(chan int)
+	elevatorCH := make(chan elevhandler.ElevatorStatus)
+	ordersCH := make(chan elevhandler.Orders)
 
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
@@ -40,68 +37,73 @@ func main() {
 	go elevio.PollStopButton(drv_stop)
 
 	go elevio.PollFloorSensor(floorCH)
-	go elevhandler.ElevatorStatusUpdateForever(drv_buttons, directionCH, floorCH, clearCH, elevatorCH, ordersCH)
+
+	myOrders := elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}}
+	myElevator := elevhandler.ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, Direction: elevio.MD_Stop}
+	elevPt := &myElevator
+	go elevhandler.ElevatorStatusUpdateForever(elevPt, drv_buttons, directionCH, floorCH, clearCH, elevatorCH, ordersCH)
 	go updateOrderLights(ordersCH)
 	//go fix lights elns
-	elevator = <-elevatorCH
 	state := "idle_state"
 	for {
 		switch state {
 		case "idle_state":
 			fmt.Println("in idle")
-			state = idle(elevatorCH, drv_stop, directionCH)
+			state = idle(elevPt, drv_stop, directionCH)
 		case "moving_up_state":
 			fmt.Println("in moving up")
-			state = moving(elevatorCH, drv_stop, drv_floors, directionCH, elevio.MD_Up)
+			state = moving(elevPt, drv_stop, drv_floors, directionCH, elevio.MD_Up)
 		case "moving_down_state":
 			fmt.Println("in moving down")
-			state = moving(elevatorCH, drv_stop, drv_floors, directionCH, elevio.MD_Down)
+			state = moving(elevPt, drv_stop, drv_floors, directionCH, elevio.MD_Down)
 		case "stop_up_state":
 			fmt.Println("in stop up")
-			state = stop(elevatorCH, drv_stop, drv_obstr, directionCH, clearCH, elevio.MD_Up)
+			state = stop(elevPt, drv_stop, drv_obstr, directionCH, clearCH, elevio.MD_Up)
 		case "stop_down_state":
 			fmt.Println("in stop down")
-			state = stop(elevatorCH, drv_stop, drv_obstr, directionCH, clearCH, elevio.MD_Down)
+			state = stop(elevPt, drv_stop, drv_obstr, directionCH, clearCH, elevio.MD_Down)
 		case "emergency_stop_state":
 			fmt.Println("in stop")
 			state = emergency_stop()
 		default:
-			state = idle(elevatorCH, drv_stop, directionCH)
+			state = idle(elevPt, drv_stop, directionCH)
 		}
 
 	}
 }
 
-func idle(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, directionCH chan<- elevio.MotorDirection) string {
+func idle(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, directionCH chan<- elevio.MotorDirection) string {
 	fmt.Println("idle before direction")
 	directionCH <- elevio.MD_Stop
 	fmt.Println("idle after direction")
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	for {
-		fmt.Println("in idle loop")
+		//fmt.Println("in idle loop")
+
 		select {
 		case s := <-drv_stop:
 			if s == true {
 				return "emergency_stop_state"
 			}
-		case e := <-elevatorCH:
+		default:
 			switch {
-			case e.Endstation < e.Floor:
+			case elevPt.Endstation < elevPt.Floor:
 				return "moving_down_state"
-			case e.Endstation > e.Floor:
+			case elevPt.Endstation > elevPt.Floor:
 				return "moving_up_state"
-			case e.Endstation == e.Floor: //fyll ut ifs pga emergency stop
-				if e.Orders.Inside[e.Floor] || e.Orders.Down[e.Floor] {
+			case elevPt.Endstation == elevPt.Floor: //fyll ut ifs pga emergency stop
+				if elevPt.Orders.Inside[elevPt.Floor] || elevPt.Orders.Down[elevPt.Floor] {
 					return "stop_down_state"
-				} else if e.Orders.Up[e.Floor] {
+				} else if elevPt.Orders.Up[elevPt.Floor] {
 					return "stop_up_state"
 				}
+			default:
 			}
 		}
 	}
 }
 
-func moving(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_floors <-chan int, directionCH chan<- elevio.MotorDirection, direction elevio.MotorDirection) string {
+func moving(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_floors <-chan int, directionCH chan<- elevio.MotorDirection, direction elevio.MotorDirection) string {
 	directionCH <- direction
 	elevio.SetMotorDirection(direction)
 	for {
@@ -110,16 +112,16 @@ func moving(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, 
 			if s == true {
 				return "emergency_stop_state"
 			}
-		case e := <-elevatorCH:
-			elevator = e
 		case f := <-drv_floors:
-			switch elevator.Direction {
+			switch direction {
 			case elevio.MD_Up: //fiks denne iffen slik at retningen blir rett test down f 3, så inside 1 og 4 samtidig den skal gå ned
-				if elevator.Orders.Up[f] || elevator.Orders.Inside[f] || elevator.Endstation == f {
-					return "stop_up_state"
+				fmt.Println("Up order check, floor: ", f)
+				if elevPt.Orders.Up[f] || elevPt.Orders.Inside[f] || elevPt.Endstation == f { //rar bug i disse if-ene, returnerer selv om det bare er down order i floor f
+					return "stop_up_state" // altså stopper på alle etasjer med ordre.
 				}
 			case elevio.MD_Down:
-				if elevator.Orders.Down[f] || elevator.Orders.Inside[f] || elevator.Endstation == f {
+				fmt.Println("Down order check, floor: ", elevPt.Floor)
+				if elevPt.Orders.Down[f] || elevPt.Orders.Inside[f] || elevPt.Endstation == f {
 					return "stop_down_state"
 				}
 			}
@@ -127,10 +129,9 @@ func moving(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, 
 	}
 }
 
-func stop(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_obstr <-chan bool, directionCH chan<- elevio.MotorDirection, clearCH chan<- bool, direction elevio.MotorDirection) string {
+func stop(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_obstr <-chan bool, directionCH chan<- elevio.MotorDirection, clearCH chan<- int, direction elevio.MotorDirection) string {
 	directionCH <- direction
-	elevator = <-elevatorCH
-	clearCH <- true
+	clearCH <- elevPt.Floor
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetDoorOpenLamp(true)
 
@@ -142,8 +143,6 @@ func stop(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, dr
 				timer.Stop()
 				return "emergency_stop_state"
 			}
-		case e := <-elevatorCH:
-			elevator = e
 		case o := <-drv_obstr:
 			if o {
 				timer.Stop()
@@ -152,9 +151,9 @@ func stop(elevatorCH <-chan elevhandler.ElevatorStatus, drv_stop <-chan bool, dr
 			}
 		case <-timer.C:
 			elevio.SetDoorOpenLamp(false)
-			if direction == elevio.MD_Up && elevator.Endstation > elevator.Floor {
+			if direction == elevio.MD_Up && elevPt.Endstation > elevPt.Floor {
 				return "moving_up_state"
-			} else if direction == elevio.MD_Down && elevator.Endstation < elevator.Floor {
+			} else if direction == elevio.MD_Down && elevPt.Endstation < elevPt.Floor {
 				return "moving_down_state"
 			} else {
 				return "idle_state"

@@ -104,8 +104,8 @@ func idle(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, directionCH 
 }
 
 func moving(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_floors <-chan int, directionCH chan<- elevio.MotorDirection, direction elevio.MotorDirection) string {
-	directionCH <- direction
 	elevio.SetMotorDirection(direction)
+	directionCH <- direction
 	for {
 		select {
 		case s := <-drv_stop:
@@ -130,10 +130,10 @@ func moving(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_floors
 }
 
 func stop(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_obstr <-chan bool, directionCH chan<- elevio.MotorDirection, clearCH chan<- int, direction elevio.MotorDirection) string {
-	directionCH <- direction
-	clearCH <- elevPt.Floor
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetDoorOpenLamp(true)
+	directionCH <- direction
+	clearCH <- elevPt.Floor
 
 	timer := time.NewTimer(3 * time.Second)
 	for {
@@ -164,7 +164,6 @@ func stop(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_obstr <-
 
 func emergency_stop() string {
 	return "idle_state" //fiks senere
-
 }
 
 func updateOrderLights(orders <-chan elevhandler.Orders) {

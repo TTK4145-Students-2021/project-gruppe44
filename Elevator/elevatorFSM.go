@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"./elevhandler"
+	"./elevinit"
 	"./elevio"
 )
 
@@ -41,6 +42,7 @@ func main() {
 	myOrders := elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}}
 	myElevator := elevhandler.ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, Direction: elevio.MD_Stop}
 	elevPt := &myElevator
+	elevinit.InitializeElevator("localhost:15657", numFloors, drv_floors, elevPt)
 	//go elevhandler.ElevatorStatusUpdateForever(elevPt, drv_buttons, directionCH, floorCH, clearCH, elevatorCH, ordersCH)
 	go func() { //temp, skal få allOrders liste fra handler/network
 		for {

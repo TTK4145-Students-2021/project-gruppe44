@@ -42,7 +42,7 @@ func main() {
 	myElevator := elevhandler.ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, Direction: elevio.MD_Stop}
 	elevPt := &myElevator
 	//go elevhandler.ElevatorStatusUpdateForever(elevPt, drv_buttons, directionCH, floorCH, clearCH, elevatorCH, ordersCH)
-	go func() { //temp, skal få orders liste fra handler/network
+	go func() { //temp, skal få allOrders liste fra handler/network
 		for {
 			time.Sleep(50 * time.Millisecond)
 			ordersCH <- elevPt.Orders
@@ -50,7 +50,6 @@ func main() {
 
 	}()
 	go updateOrderLights(ordersCH)
-	//go fix lights elns
 	state := "idle_state"
 	for {
 		switch state {
@@ -145,7 +144,7 @@ func stop(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_obstr <-
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetDoorOpenLamp(true)
 	elevPt.Direction = direction
-	elevhandler.ElevatorClearOrdersAtFloor(elevPt, elevPt.Floor) //fjern andre argument
+	elevhandler.ElevatorClearOrdersAtFloor(elevPt)
 
 	timer := time.NewTimer(3 * time.Second)
 	for {

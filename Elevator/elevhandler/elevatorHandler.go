@@ -47,9 +47,9 @@ func ElevatorStatusUpdateForever(elevatorPt *ElevatorStatus, order <-chan elevio
 	*/
 	for {
 		select {
-		case c := <-clear:
+		case <-clear:
 			fmt.Println("removed orders")
-			ElevatorClearOrdersAtFloor(elevatorPt, c)
+			ElevatorClearOrdersAtFloor(elevatorPt)
 			ElevatorSetEndstation(elevatorPt)
 			//elevatorCH <- elevator
 			ordersCH <- elevatorPt.Orders
@@ -126,9 +126,15 @@ func ElevatorGetEndstation(floor_from int, floor_to int, elevator ElevatorStatus
 }
 */
 
-func ElevatorClearOrdersAtFloor(elevatorPt *ElevatorStatus, floor int) { // evt legg til håndtering for å ikke fjerne ordre motsatt retning
-	elevatorPt.Orders.Inside[floor] = false
-	elevatorPt.Orders.Up[floor] = false
-	elevatorPt.Orders.Down[floor] = false
+func ElevatorClearOrdersAtFloor(elevatorPt *ElevatorStatus) { // evt legg til håndtering for å ikke fjerne ordre motsatt retning
+	elevatorPt.Orders.Inside[elevatorPt.Floor] = false
+	if elevatorPt.Endstation == elevatorPt.Floor {
+		elevatorPt.Orders.Up[elevatorPt.Floor] = false
+		elevatorPt.Orders.Down[elevatorPt.Floor] = false
+	} else if elevatorPt.Direction == elevio.MD_Up {
+		elevatorPt.Orders.Up[elevatorPt.Floor] = false
+	} else {
+		elevatorPt.Orders.Down[elevatorPt.Floor] = false
+	}
 
 }

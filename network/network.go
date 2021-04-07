@@ -1,11 +1,10 @@
-package network
+package Network
 
 import (
 	"flag"
 	"fmt"
 	"math/rand"
 	"os"
-	"time"
 
 	"../Elevator/elevio"
 
@@ -46,17 +45,17 @@ type SendCost struct {
 	SenderId string
 }
 
-func costFunction(order Order, elevatorStatus ElevatorStatus) int {
+func costFunction(order elevio.ButtonEvent, elevatorStatus ElevatorStatus) int {
 	return rand.Intn(1000) //return random rumber as temp cost function
 	//return Abs(order.Floor - elevatorStatus.CurrentFloor)
 }
 
-func network(id string, orderRx <-chan elevio.ButtonEvent, orderTx chan<- elevio.ButtonEvent)) {
+func networkMain(id string, orderToElev chan<- elevio.ButtonEvent, orderFromElev <-chan elevio.ButtonEvent) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
-	
+
 	//var id string
-	
+
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
 
@@ -101,7 +100,7 @@ func network(id string, orderRx <-chan elevio.ButtonEvent, orderTx chan<- elevio
 	go bcast.Receiver(33334, costRx)
 
 	// The example message. We just send one of these every second.
-	go func() {
+	go func() { //temp
 		/*
 			helloMsg := HelloMsg{"Hello from " + id, 0}
 			for {
@@ -110,14 +109,23 @@ func network(id string, orderRx <-chan elevio.ButtonEvent, orderTx chan<- elevio
 				time.Sleep(1 * time.Second)
 			}
 		*/
-		time.Sleep(3 * time.Second) //make orders
-		order := Order{0, 1}
-		for {
-			order.Floor++
-			orderTx <- order
-			time.Sleep(10 * time.Second)
-		}
+		/*
+			time.Sleep(3 * time.Second) //make orders
+			order := Order{0, 1}
+			for {
+				order.Floor++
+				orderTx <- order
+				time.Sleep(10 * time.Second)
+			}
+		*/
 		//sendOrder := SendOrder{order, "333"}
+
+		for {
+			select {
+			case o := <-orderFromElev:
+				orderTx <- o
+			}
+		}
 	}()
 	//order1 := Order{4, 0}
 	orders1 := make([]Order, 0) //lager en dummy elevator status
@@ -163,8 +171,9 @@ func network(id string, orderRx <-chan elevio.ButtonEvent, orderTx chan<- elevio
 				}
 			*/
 			if takeThisOrder {
-				thisElevator.CurrentOrders = append(thisElevator.CurrentOrders, o) //add order if cost is smallest
+				//thisElevator.CurrentOrders = append(thisElevator.CurrentOrders, o) //add order if cost is smallest
 				fmt.Printf("Took order: %#v\n", o)
+				orderToElev <- o
 				//fmt.Printf("current status:  %#v\n", thisElevator)
 				//send confirmation to others?
 			} else {

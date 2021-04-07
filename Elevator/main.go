@@ -1,72 +1,62 @@
 package main
 
 import (
-  "fmt"
+	"fmt"
 
-  "./elevhandler"
-  "./elevio"
-  "./initlights"
-  "./orderhandler"
+	"./elevio"
+	"./initlights"
 )
 
-func main(){
+func main() {
 
-    // Test of CostFunc
-    BE := elevio.ButtonEvent{Floor: 3,Button: 1}
-    ES := elevhandler.ElevatorStatus{Endstation: 4, Orders: elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}},Floor: 1,Direction: 1}
+	numFloors := 4
+	addr := "localhost:15657"
 
-    fmt.Printf("Costfunction value: %d\n", orderhandler.CostFunction(BE, ES))
+	initlights.InitializeLights(addr, numFloors)
 
+	var d elevio.MotorDirection = elevio.MD_Up
+	//elevio.SetMotorDirection(d)
 
-    numFloors := 4
-    addr := "localhost:15657"
+	drvButtons := make(chan elevio.ButtonEvent)
+	drvFloors := make(chan int)
+	drvObstr := make(chan bool)
+	drvStop := make(chan bool)
 
-    initlights.InitializeLights(addr, numFloors)
+	go elevio.PollButtons(drvButtons)
+	go elevio.PollFloorSensor(drvFloors)
+	go elevio.PollObstructionSwitch(drvObstr)
+	go elevio.PollStopButton(drvStop)
 
-    var d elevio.MotorDirection = elevio.MD_Up
-    //elevio.SetMotorDirection(d)
+	for {
+		select {
+		case a := <-drvButtons:
+			fmt.Printf("%+v\n", a)
+			elevio.SetButtonLamp(a.Button, a.Floor, true)
 
-    drvButtons := make(chan elevio.ButtonEvent)
-    drvFloors  := make(chan int)
-    drvObstr   := make(chan bool)
-    drvStop    := make(chan bool)
+		case a := <-drvFloors:
+			fmt.Printf("%+v\n", a)
+			if a == numFloors-1 {
+				d = elevio.MD_Down
+			} else if a == 0 {
+				d = elevio.MD_Up
+			}
+			elevio.SetMotorDirection(d)
 
-    go elevio.PollButtons(drvButtons)
-    go elevio.PollFloorSensor(drvFloors)
-    go elevio.PollObstructionSwitch(drvObstr)
-    go elevio.PollStopButton(drvStop)
+		case a := <-drvObstr:
+			fmt.Printf("%+v\n", a)
+			if a {
+				elevio.SetMotorDirection(elevio.MD_Stop)
+			} else {
+				elevio.SetMotorDirection(d)
+			}
 
-
-    for {
-        select {
-        case a := <- drvButtons:
-            fmt.Printf("%+v\n", a)
-            elevio.SetButtonLamp(a.Button, a.Floor, true)
-
-        case a := <- drvFloors:
-            fmt.Printf("%+v\n", a)
-            if a == numFloors-1 {
-                d = elevio.MD_Down
-            } else if a == 0 {
-                d = elevio.MD_Up
-            }
-            elevio.SetMotorDirection(d)
-
-        case a := <- drvObstr:
-            fmt.Printf("%+v\n", a)
-            if a {
-                elevio.SetMotorDirection(elevio.MD_Stop)
-            } else {
-                elevio.SetMotorDirection(d)
-            }
-
-        case a := <- drvStop:
-            fmt.Printf("%+v\n", a)
-            for f := 0; f < numFloors; f++ {
-                for b := elevio.ButtonType(0); b < 3; b++ {
-                    elevio.SetButtonLamp(b, f, false)
-                }
-            }
-        }
-    }
+		case a := <-drvStop:
+			fmt.Printf("%+v\n", a)
+			for f := 0; f < numFloors; f++ {
+				for b := elevio.ButtonType(0); b < 3; b++ {
+					elevio.SetButtonLamp(b, f, false)
+				}
+			}
+		}
+	}
 }

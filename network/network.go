@@ -25,7 +25,6 @@ type HelloMsg struct {
 type Order struct {
 	Floor     int
 	Direction int // 0 for directionless ( inside order) 1 for up, 2 for down (outside orders)
-
 }
 
 //ElevatorStatus contains array of orders, current floor and direction

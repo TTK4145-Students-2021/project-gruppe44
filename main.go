@@ -18,13 +18,10 @@ func main() {
 			case o := <-orderTx:
 				orderRx <- o
 			}
-
 		}
-
 	}()
 
 	//var id string
 	//go Network.NetworkMain(id, orderRx, orderTx)
 	Elevator.ElevatorFSM(addr, numFloors, orderRx, orderTx)
-
 }

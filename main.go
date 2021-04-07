@@ -19,6 +19,8 @@ func main() {
 		}
 
 	}()
+	//var id string
+	//network.network(id, orderRx, orderTx)
 	Elevator.ElevatorFSM("localhost:15657", numFloors, orderRx, orderTx)
 
 }

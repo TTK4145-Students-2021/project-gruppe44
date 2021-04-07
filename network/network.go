@@ -1,4 +1,4 @@
-package main
+package network
 
 import (
 	"flag"
@@ -9,9 +9,9 @@ import (
 
 	"../Elevator/elevio"
 
-	"./network/bcast"
-	"./network/localip"
-	"./network/peers"
+	"./bcast"
+	"./localip"
+	"./peers"
 )
 
 // We define some custom struct to send over the network.
@@ -51,10 +51,12 @@ func costFunction(order Order, elevatorStatus ElevatorStatus) int {
 	//return Abs(order.Floor - elevatorStatus.CurrentFloor)
 }
 
-func main() {
+func network(id string, orderRx <-chan elevio.ButtonEvent, orderTx chan<- elevio.ButtonEvent)) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
-	var id string
+	
+	//var id string
+	
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
 

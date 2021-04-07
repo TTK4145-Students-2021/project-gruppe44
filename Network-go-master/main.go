@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"../Elevator/elevio"
+
 	"./network/bcast"
 	"./network/localip"
 	"./network/peers"
@@ -86,8 +88,8 @@ func main() {
 	go bcast.Transmitter(16569, helloTx)
 	go bcast.Receiver(16569, helloRx)
 
-	orderTx := make(chan Order)
-	orderRx := make(chan Order)
+	orderTx := make(chan elevio.ButtonEvent) //denne var Order struct, endret til elevio.buttonevent
+	orderRx := make(chan elevio.ButtonEvent)
 	go bcast.Transmitter(33333, orderTx)
 	go bcast.Receiver(33333, orderRx)
 

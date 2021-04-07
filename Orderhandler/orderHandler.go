@@ -1,42 +1,21 @@
-package orderhandler
+package Orderhandler
 
 import (
-	// "fmt"
+	"fmt"
 	"math"
 
-	"../elevio"
-	"../elevhandler"
+	"../Elevator/elevhandler"
+	"../Elevator/elevio"
 )
-
-
-// type ButtonEvent struct {
-// 	Floor  int			(1,2,3,4,...)		- etasje til person
-// 	Button ButtonType	(up,down,cabcall)	- outside/cabcall=inside
-// }
-
-// type ElevatorStatus struct {
-// 	Endstation int
-// 	Orders     Orders
-// 	Floor      int
-// 	Direction  elevio.MotorDirection
-// }
-
-// // Det EN heis skal gjøre
-// type Orders struct {
-// 	Inside []bool /** < The inside panel orders*/
-// 	Up     []bool /** < The upwards orders from outside */
-// 	Down   []bool /** < The downwards orders from outside */
-// }
-	
 
 // TODO:
 // Might have to add a condition in CostFunction where: elevStatus.Floor == orderReq.Floor
 // Find out what cab call do
 
 // NOTE: testbranch vs. master
-			
+
 // We assume that the person waits for the assigned elevator
-// Temporarily using elevStatus.Direction for directions, might add a new variable to elevStatus 
+// Temporarily using elevStatus.Direction for directions, might add a new variable to elevStatus
 // keeping track of direction while stopping at floor and until it changes direction
 func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorStatus) int {
 	
@@ -87,8 +66,10 @@ func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorSt
 	}
 }
 
-func Timer(){
-	
+// Used to keep track of time for each order,
+// so that a timeout flag occurs when the order has been active for a long time and not finished.
+func OrderTimeoutFlag(){
+	fmt.Println("Hello, I am an OrderTimeoutFlag!")
 }
 
 func FileHandler(){

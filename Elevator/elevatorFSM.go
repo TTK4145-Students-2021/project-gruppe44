@@ -1,4 +1,4 @@
-package main
+package Elevator
 
 import (
 	"fmt"
@@ -9,18 +9,19 @@ import (
 	"./elevio"
 )
 
-func main() {
-	numFloors := 4
+func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, orderTx chan<- elevio.ButtonEvent) { //"localhost:15657"
+	//numFloors := 4
 
-	elevio.Init("localhost:15657", numFloors)
+	elevio.Init(addr, numFloors)
 
-	drv_buttons := make(chan elevio.ButtonEvent)
+	//drv_buttons := make(chan elevio.ButtonEvent)
+
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
 	ordersCH := make(chan elevhandler.Orders)
 
-	go elevio.PollButtons(drv_buttons)
+	go elevio.PollButtons(orderTx)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
@@ -28,7 +29,7 @@ func main() {
 	myOrders := elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}}
 	myElevator := elevhandler.ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, Direction: elevio.MD_Stop}
 	elevPt := &myElevator
-	elevinit.InitializeElevator("localhost:15657", numFloors, drv_floors, elevPt)
+	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt)
 	go func() { //temp, skal få allOrders liste fra handler/network
 		for {
 			time.Sleep(50 * time.Millisecond)
@@ -42,24 +43,24 @@ func main() {
 		switch state {
 		case "idle_state":
 			fmt.Println("in idle")
-			state = idle(elevPt, drv_stop, drv_buttons)
+			state = idle(elevPt, drv_stop, orderRx)
 		case "moving_up_state":
 			fmt.Println("in moving up")
-			state = moving(elevPt, drv_stop, drv_floors, drv_buttons, elevio.MD_Up)
+			state = moving(elevPt, drv_stop, drv_floors, orderRx, elevio.MD_Up)
 		case "moving_down_state":
 			fmt.Println("in moving down")
-			state = moving(elevPt, drv_stop, drv_floors, drv_buttons, elevio.MD_Down)
+			state = moving(elevPt, drv_stop, drv_floors, orderRx, elevio.MD_Down)
 		case "stop_up_state":
 			fmt.Println("in stop up")
-			state = stop(elevPt, drv_stop, drv_obstr, drv_buttons, elevio.MD_Up)
+			state = stop(elevPt, drv_stop, drv_obstr, orderRx, elevio.MD_Up)
 		case "stop_down_state":
 			fmt.Println("in stop down")
-			state = stop(elevPt, drv_stop, drv_obstr, drv_buttons, elevio.MD_Down)
+			state = stop(elevPt, drv_stop, drv_obstr, orderRx, elevio.MD_Down)
 		case "emergency_stop_state":
 			fmt.Println("in stop")
 			state = emergency_stop()
 		default:
-			state = idle(elevPt, drv_stop, drv_buttons)
+			state = idle(elevPt, drv_stop, orderRx)
 		}
 
 	}

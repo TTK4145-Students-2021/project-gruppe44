@@ -4,23 +4,26 @@ import (
 	"fmt"
 
 	"./elevio"
-	"./initlights"
+	"./elevinit"
+	"./elevhandler"
 )
 
 func main() {
 
 	numFloors := 4
 	addr := "localhost:15657"
-
-	initlights.InitializeLights(addr, numFloors)
-
+	elevPt := elevhandler.ElevatorStatus
+	
 	var d elevio.MotorDirection = elevio.MD_Up
 	//elevio.SetMotorDirection(d)
-
+	
 	drvButtons := make(chan elevio.ButtonEvent)
 	drvFloors := make(chan int)
 	drvObstr := make(chan bool)
 	drvStop := make(chan bool)
+	
+	// Usikker på om dette blir riktig for nå
+	go elevinit.InitializeElevator(addr, numFloors, drvFloors, &elevPt)
 
 	go elevio.PollButtons(drvButtons)
 	go elevio.PollFloorSensor(drvFloors)

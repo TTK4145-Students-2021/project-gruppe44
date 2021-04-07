@@ -1,7 +1,7 @@
 package orderhandler
 
 import (
-	"fmt"
+	// "fmt"
 	"math"
 
 	"../elevio"
@@ -82,7 +82,7 @@ func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorSt
 		} else /*if (elevDirUP)*/	{return distTotal}
 	
 	} else {
-		if ((elevDirDOWN && orderReqDOWN) || (elevDirDOWN && orderReqDOWN)) {return -1
+		if ((elevDirUP && orderReqUP) || (elevDirDOWN && orderReqDOWN)) {return -1
 		} else {return distTotal}
 	}
 }

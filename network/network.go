@@ -50,7 +50,7 @@ func costFunction(order elevio.ButtonEvent, elevatorStatus ElevatorStatus) int {
 	//return Abs(order.Floor - elevatorStatus.CurrentFloor)
 }
 
-func networkMain(id string, orderToElev chan<- elevio.ButtonEvent, orderFromElev <-chan elevio.ButtonEvent) {
+func Network(id string, orderToElev chan<- elevio.ButtonEvent, orderFromElev <-chan elevio.ButtonEvent) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 

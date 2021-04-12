@@ -1,7 +1,6 @@
 package Orderhandler
 
 import (
-	"fmt"
 	"math"
 	"time"
 
@@ -16,13 +15,13 @@ import (
 // testbranch vs masterbranch
 
 // We assume that the person waits for the assigned elevator
-// Do we need a condition where it is in MD_STOP mode? 
+// Do we need a condition where it is in MD_STOP mode?
+// The distances are complicated expressions
 func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorStatus) int {
-	
-	distToRequest := int(math.Abs(float64(orderReq.Floor) - float64(elevStatus.Floor)))
-	distToEndstation := int(math.Abs(float64(elevStatus.Endstation) - float64(elevStatus.Floor)))
-	distFromEndstationToRequest := int(math.Abs(float64(orderReq.Floor) - float64(elevStatus.Endstation)))
-	distTotal := distFromEndstationToRequest + distToEndstation
+	distToRequest 				:= DistanceBetweenFloors(elevStatus.Floor, orderReq.Floor)
+	distToEndstation 			:= DistanceBetweenFloors(elevStatus.Floor, elevStatus.Endstation)
+	distFromEndstationToRequest := DistanceBetweenFloors(elevStatus.Endstation, orderReq.Floor)
+	distTotal 					:= distFromEndstationToRequest + distToEndstation
 
 	// Boolean expressions:
 	elevFloorUNDER	:= (elevStatus.Floor < orderReq.Floor)
@@ -66,39 +65,39 @@ func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorSt
 	}
 }
 
+func DistanceBetweenFloors(floor1, floor2 int) int {
+	return int(math.Abs(float64(floor1) - float64(floor2)))
+}
+
+
 // Used to keep track of time for each order,
 // so that a timeout flag occurs when the order has been active for a long time and not finished.
-func OrderTimeoutFlag(elevPt *elevhandler.ElevatorStatus) bool {
-	fmt.Printf("This is from OrderTimeoutFlag()!")
+func OrderTimeoutFlag(elevPt *elevhandler.ElevatorStatus, order elevio.ButtonEvent) {
+
+	// Calculate expected completion time for order
+	timeLimitPerFloor := 5 * time.Second // Might have to adjust this time...
+	numOfFloorsToMove := DistanceBetweenFloors(elevPt.Floor, order.Floor)
+	totalTimeForOrder := timeLimitPerFloor * time.Duration(numOfFloorsToMove)
 	
-	timeLimit := 5 * time.Second
-	time.Sleep(timeLimit)
-
-	/* 
-	// Might not need these:
-	startTime := time.Now()
-	deadline  := startTime.Add(timeLimit)
-	diff := timeLimit.Sub(start).Seconds()
-	fmt.Printf("difference = %f seconds\n", diff)
-	*/
-
+	time.Sleep(totalTimeForOrder)
 	
-	// Do something...
-	// Check if floor has changed?
-	// Check if # of orders have changed/decreased?
+	// If elevPT.order == true -> order has not completed, meaning something is wrong. Set TimeoutFlag.
+	switch order.Button {
+	case elevio.BT_Cab:
 
-	/*
-	// PSEUDOCODE
-	if currentFloor != prevFloor	: return elevPT.Timeout = false
-	else 							: return elevPT.Timeout = true
-
-	// OR
-	if #elevPT.Orders != #prev elevPT.Orders	: return elevPT.Timeout = false
-	else 										: return elevPT.Timeout = true
-	*/
-
-
-	return false // temp return
+		if (elevPt.Orders.Inside[order.Floor] == true) {elevPt.Timeout = true
+		} else {elevPt.Timeout = false}
+	
+	case elevio.BT_HallUp:
+		
+		if (elevPt.Orders.Up[order.Floor] == true) {elevPt.Timeout = true
+		} else {elevPt.Timeout = false}
+	
+	case elevio.BT_HallDown:
+		
+		if (elevPt.Orders.Down[order.Floor] == true) {elevPt.Timeout = true
+		} else {elevPt.Timeout = false}
+	}
 }
 
 // When the order list is altered we will save the orders to file,

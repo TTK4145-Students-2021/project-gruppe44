@@ -26,7 +26,7 @@ func ElevatorFSM(id string, addr string, numFloors int, orderRecieved <-chan ele
 	go elevio.PollStopButton(drv_stop)
 
 	myOrders := elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}}
-	myElevator := elevhandler.ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, Direction: elevio.MD_Stop}
+	myElevator := elevhandler.ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, IsConnected: true, Direction: elevio.MD_Stop}
 	elevPt := &myElevator
 
 	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt)
@@ -47,7 +47,7 @@ func ElevatorFSM(id string, addr string, numFloors int, orderRecieved <-chan ele
 		for {
 			time.Sleep(sendRate)
 
-			if !(reflect.DeepEqual(prevElev, *elevPt)) {
+			if !(reflect.DeepEqual(prevElev, *elevPt)) { //burde ikke bare sende en gang, pga packet loss
 				prevElev = *elevPt
 				elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
 			}

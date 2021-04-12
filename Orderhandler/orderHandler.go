@@ -187,12 +187,13 @@ func Wait() {
 // Elevators that are not connected will not be taken into consideration.
 func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus, myID string, order elevio.ButtonEvent, orderOut chan<- elevio.ButtonEvent) {
 	//TODO: Add to OrdersAll struct, and save to file
+	//TODO: Add small offset based on id, so that no elevator will have the same cost
 	fmt.Println("Got order request")
 	minCost := 1000000000000000000 //Big number so that the first cost is lower, couldn't use math.Inf(1) because of different types. Fix this
 	var chosenElev string
 	for id, elevStatus := range elevMap {
 		cost := CostFunction(order, elevStatus)
-		if cost < minCost {
+		if (cost < minCost) && elevStatus.IsConnected {
 			minCost = cost
 			chosenElev = id
 		}

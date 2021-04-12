@@ -14,8 +14,6 @@ func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, 
 
 	elevio.Init(addr, numFloors)
 
-	//drv_buttons := make(chan elevio.ButtonEvent)
-
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
@@ -29,14 +27,16 @@ func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, 
 	myOrders := elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}}
 	myElevator := elevhandler.ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, Direction: elevio.MD_Stop}
 	elevPt := &myElevator
+
 	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt)
+
 	go func() { //temp, skal få allOrders liste fra handler/network
 		for {
 			time.Sleep(50 * time.Millisecond)
 			ordersCH <- elevPt.Orders
 		}
-
 	}()
+
 	go updateOrderLights(ordersCH)
 
 	sendRate := 50 * time.Millisecond
@@ -47,6 +47,7 @@ func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, 
 		}
 	}()
 	state := "idle_state"
+
 	for {
 		switch state {
 		case "idle_state":
@@ -70,13 +71,13 @@ func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, 
 		default:
 			state = idle(elevPt, drv_stop, orderRx)
 		}
-
 	}
 }
 
 func idle(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, orderCH <-chan elevio.ButtonEvent) string {
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevPt.Direction = elevio.MD_Stop
+
 	for {
 		select {
 		case s := <-stopCH:
@@ -107,6 +108,7 @@ func idle(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, orderCH <-chan
 func moving(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, floorCH <-chan int, orderCH <-chan elevio.ButtonEvent, direction elevio.MotorDirection) string {
 	elevio.SetMotorDirection(direction)
 	elevPt.Direction = direction
+
 	for {
 		select {
 		case s := <-stopCH:
@@ -139,10 +141,12 @@ func moving(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, floorCH <-ch
 func stop(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_obstr <-chan bool, orderCH <-chan elevio.ButtonEvent, direction elevio.MotorDirection) string {
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetDoorOpenLamp(true)
+
 	elevPt.Direction = direction
+	timer := time.NewTimer(3 * time.Second)
+
 	elevhandler.ClearOrdersAtFloor(elevPt)
 
-	timer := time.NewTimer(3 * time.Second)
 	for {
 		select {
 		case s := <-drv_stop:
@@ -188,5 +192,4 @@ func updateOrderLights(orders <-chan elevhandler.Orders) {
 			}
 		}
 	}
-
 }

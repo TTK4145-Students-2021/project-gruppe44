@@ -30,8 +30,9 @@ ordersAll.Up = [0, "heis1", "heis2"]
 */
 type ElevatorStatus struct {
 	Endstation int
-	Orders     Orders
 	Floor      int
+	Timeout    bool
+	Orders     Orders
 	Direction  elevio.MotorDirection
 }
 

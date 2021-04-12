@@ -2,6 +2,7 @@ package main
 
 import (
 	"./Elevator"
+	"./Elevator/elevhandler"
 	"./Elevator/elevio"
 	"./Network"
 )
@@ -16,22 +17,21 @@ func main() {
 
 	orderRx := make(chan elevio.ButtonEvent)
 	orderTx := make(chan elevio.ButtonEvent)
+	elevStatusCH := make(chan elevhandler.ElevatorStatus)
+	elevStatID := make(chan Network.Elevator)
 
-	/*
-		go func() {
-			for {
-				select {
-				case o := <-orderTx:
-					orderRx <- o
-				}
-
+	go func() { //temp for å tømme ubrukte channels
+		for {
+			select {
+			case <-elevStatusCH:
 			}
 
-		}()
-	*/
+		}
+
+	}()
 
 	var id string
-	go Network.Network(id, orderRx, orderTx)
-	Elevator.ElevatorFSM(addr, numFloors, orderRx, orderTx)
+	go Network.Network(id, orderRx, orderTx, elevStatusCH, elevStatID)
+	Elevator.ElevatorFSM(addr, numFloors, orderRx, orderTx, elevStatusCH)
 
 }

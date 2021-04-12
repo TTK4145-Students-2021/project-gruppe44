@@ -9,7 +9,7 @@ import (
 	"./elevio"
 )
 
-func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, orderTx chan<- elevio.ButtonEvent) { //"localhost:15657"
+func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, orderTx chan<- elevio.ButtonEvent, elevStatus chan<- elevhandler.ElevatorStatus) { //"localhost:15657"
 	//numFloors := 4
 
 	elevio.Init(addr, numFloors)
@@ -38,6 +38,14 @@ func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, 
 
 	}()
 	go updateOrderLights(ordersCH)
+
+	sendRate := 50 * time.Millisecond
+	go func() { //send elevator status to network
+		for {
+			time.Sleep(sendRate)
+			elevStatus <- *elevPt
+		}
+	}()
 	state := "idle_state"
 	for {
 		switch state {

@@ -2,6 +2,7 @@ package Elevator
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"./elevhandler"
@@ -9,7 +10,7 @@ import (
 	"./elevio"
 )
 
-func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, orderTx chan<- elevio.ButtonEvent, elevStatus chan<- elevhandler.ElevatorStatus) { //"localhost:15657"
+func ElevatorFSM(id string, addr string, numFloors int, orderRecieved <-chan elevio.ButtonEvent, drv_btn chan<- elevio.ButtonEvent, elevCH chan<- elevhandler.Elevator) { //"localhost:15657"
 	//numFloors := 4
 
 	elevio.Init(addr, numFloors)
@@ -19,7 +20,7 @@ func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, 
 	drv_stop := make(chan bool)
 	ordersCH := make(chan elevhandler.Orders)
 
-	go elevio.PollButtons(orderTx)
+	go elevio.PollButtons(drv_btn)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
@@ -39,11 +40,17 @@ func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, 
 
 	go updateOrderLights(ordersCH)
 
-	sendRate := 50 * time.Millisecond
 	go func() { //send elevator status to network
+		sendRate := 50 * time.Millisecond
+		prevElev := *elevPt
+		elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
 		for {
 			time.Sleep(sendRate)
-			elevStatus <- *elevPt
+
+			if !(reflect.DeepEqual(prevElev, *elevPt)) {
+				prevElev = *elevPt
+				elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
+			}
 		}
 	}()
 	state := "idle_state"
@@ -52,24 +59,24 @@ func ElevatorFSM(addr string, numFloors int, orderRx <-chan elevio.ButtonEvent, 
 		switch state {
 		case "idle_state":
 			fmt.Println("in idle")
-			state = idle(elevPt, drv_stop, orderRx)
+			state = idle(elevPt, drv_stop, orderRecieved)
 		case "moving_up_state":
 			fmt.Println("in moving up")
-			state = moving(elevPt, drv_stop, drv_floors, orderRx, elevio.MD_Up)
+			state = moving(elevPt, drv_stop, drv_floors, orderRecieved, elevio.MD_Up)
 		case "moving_down_state":
 			fmt.Println("in moving down")
-			state = moving(elevPt, drv_stop, drv_floors, orderRx, elevio.MD_Down)
+			state = moving(elevPt, drv_stop, drv_floors, orderRecieved, elevio.MD_Down)
 		case "stop_up_state":
 			fmt.Println("in stop up")
-			state = stop(elevPt, drv_stop, drv_obstr, orderRx, elevio.MD_Up)
+			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, elevio.MD_Up)
 		case "stop_down_state":
 			fmt.Println("in stop down")
-			state = stop(elevPt, drv_stop, drv_obstr, orderRx, elevio.MD_Down)
+			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, elevio.MD_Down)
 		case "emergency_stop_state":
 			fmt.Println("in stop")
 			state = emergency_stop()
 		default:
-			state = idle(elevPt, drv_stop, orderRx)
+			state = idle(elevPt, drv_stop, orderRecieved)
 		}
 	}
 }
@@ -120,12 +127,12 @@ func moving(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, floorCH <-ch
 			elevio.SetFloorIndicator(f)
 			switch direction {
 			case elevio.MD_Up:
-				fmt.Println("Up order check, floor: ", f)
+				//fmt.Println("Up order check, floor: ", f)
 				if elevPt.Orders.Up[f] || elevPt.Orders.Inside[f] || elevPt.Endstation == f {
 					return "stop_up_state"
 				}
 			case elevio.MD_Down:
-				fmt.Println("Down order check, floor: ", elevPt.Floor)
+				//fmt.Println("Down order check, floor: ", elevPt.Floor)
 				if elevPt.Orders.Down[f] || elevPt.Orders.Inside[f] || elevPt.Endstation == f {
 					return "stop_down_state"
 				}

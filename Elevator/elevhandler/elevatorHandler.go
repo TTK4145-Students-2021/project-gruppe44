@@ -29,11 +29,17 @@ type OrdersAll struct {
 ordersAll.Up = [0, "heis1", "heis2"]
 */
 type ElevatorStatus struct {
-	Endstation int
-	Floor      int
-	Timeout    bool
-	Orders     Orders
-	Direction  elevio.MotorDirection
+	Endstation  int
+	Floor       int
+	Timeout     bool
+	IsConnected bool
+	Orders      Orders
+	Direction   elevio.MotorDirection
+}
+
+type Elevator struct {
+	ID     string
+	Status ElevatorStatus
 }
 
 func AddOrder(elevatorPt *ElevatorStatus, order elevio.ButtonEvent) {

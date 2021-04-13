@@ -107,6 +107,11 @@ type Order struct {
 	//TimeStarted time.Time //currently unused, but might be used for timeout flag
 }
 
+type Confirmation struct {
+	ID    string             //ID of elevator who confirmed order
+	Order elevio.ButtonEvent //The order to be confirmed
+}
+
 type HallOrders struct {
 	//Inside []Order /** < The inside panel orders*/ //we ignore inside orders as this is handled directly by the elevator
 	Up   []Order /** < The upwards orders from outside */
@@ -125,6 +130,7 @@ func OrderHandlerFSM(myID string,
 	// Inputs:
 	// NewOrder ButtonEvent: This is a new order that should be handled.
 	// FinishedOrder ButtonEvent: This is a finished order that should be cleared.
+	// confirmedOrder ButtonEvent: This is and order to be confirmed
 	// Elevator struct: Includes ElevatorStatus and ElevatorID. This is used to evaluate the cost of an order on each elevator.
 	// IsConnected struct: Contains a Connected bool that says if the elevator is connected and ElevatorID.
 
@@ -138,8 +144,10 @@ func OrderHandlerFSM(myID string,
 	elevMap = make(map[string]elevhandler.ElevatorStatus)
 	for {
 		select {
+		case conf := <-confirmationIn:
+			ConfirmOrder(ordersPt, conf)
 		case o := <-newOrder:
-			ChooseElevator(elevMap, ordersPt, myID, o, orderOut)
+			ChooseElevator(elevMap, ordersPt, myID, o, orderOut, confirmationOut)
 		case c := <-finishedOrder:
 			ClearOrder(ordersPt, c)
 		case e := <-elev:
@@ -200,6 +208,7 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	}
 	if chosenElev == myID {
 		orderOut <- order
+		conf <- Confirmation{ID: myID, Order: order}
 		fmt.Println("Took the order")
 	} else {
 		fmt.Println("Didn't take order")
@@ -209,8 +218,19 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 }
 
 // When an order confirmation is recieved, this function will set that order as confirmed.
-func ConfirmOrder() {
-
+func ConfirmOrder(ordersPt *HallOrders, conf Confirmation) {
+	switch conf.Order.Button {
+	case elevio.BT_HallUp:
+		if ordersPt.Up[conf.Order.Floor].ID == conf.ID {
+			ordersPt.Up[conf.Order.Floor].Confirmed = true
+			fmt.Println("Confirmed order")
+		}
+	case elevio.BT_HallDown:
+		if ordersPt.Down[conf.Order.Floor].ID == conf.ID {
+			ordersPt.Down[conf.Order.Floor].Confirmed = true
+			fmt.Println("Confirmed order")
+		}
+	}
 }
 
 // When an order times out, this function will resend that order to the network module as a new order.

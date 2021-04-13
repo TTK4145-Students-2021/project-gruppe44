@@ -5,7 +5,7 @@ import (
 
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"
-
+	"../Orderhandler"
 	"./bcast"
 	"./peers"
 )
@@ -14,9 +14,15 @@ import (
 // Note that all members we want to transmit must be public.
 // Any private members will be received as zero-values.
 
-func Network(id string, orderRx chan<- elevio.ButtonEvent, orderTx <-chan elevio.ButtonEvent, elevTx <-chan elevhandler.Elevator, elevRx chan<- elevhandler.Elevator) { //change orderToElev with orderRx when orderhandler works
-	// Our id can be anything. Here we pass it on the command line, using
-	//  `go run main.go -id=our_id`
+func Network(id string,
+			 orderRx chan<- elevio.ButtonEvent,
+			 orderTx <-chan elevio.ButtonEvent,
+			 elevTx <-chan elevhandler.Elevator,
+			 elevRx chan<- elevhandler.Elevator,
+			 confTx <-chan Orderhandler.Confirmation,
+			 confRx chan<- Orderhandler.Confirmation,
+			 finTx <-chan elevio.ButtonEvent,
+			 finRx chan<- elevio.ButtonEvent) {
 
 	//var id string
 
@@ -34,6 +40,12 @@ func Network(id string, orderRx chan<- elevio.ButtonEvent, orderTx <-chan elevio
 
 	go bcast.Transmitter(33334, elevTx)
 	go bcast.Receiver(33334, elevRx)
+
+	go bcast.Transmitter(33335, finTx)
+	go bcast.Receiver(33335, finRx)
+
+	go bcast.Transmitter(33336, confTx)
+	go bcast.Receiver(33336, confRx)
 
 	fmt.Println("Started")
 	for {

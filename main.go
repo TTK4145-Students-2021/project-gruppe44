@@ -24,15 +24,19 @@ func main() {
 	orderFromNet := make(chan elevio.ButtonEvent)
 	orderFromElev := make(chan elevio.ButtonEvent)
 	orderFromHandlr := make(chan elevio.ButtonEvent)
-	orderFinished := make(chan elevio.ButtonEvent)
 	orderLights := make(chan elevhandler.Orders)
+	finIn := make(chan elevio.ButtonEvent)
+	finOut := make(chan elevio.ButtonEvent)
+	confOut := make(chan Orderhandler.Confirmation)
+	confIn := make(chan Orderhandler.Confirmation)
 	elevFromFSM := make(chan elevhandler.Elevator)
 	elevFromNet := make(chan elevhandler.Elevator)
 	/*
 		go func() { //temp for å tømme ubrukte channels
 			for {
 				select {
-				case <-elevStatusCH:
+				case c := <-confOut:
+					confIn <- c
 				}
 
 			}
@@ -56,8 +60,8 @@ func main() {
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	}
 
-	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet)
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, orderFinished, elevFromNet, orderFromHandlr, orderLights)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandlr, orderFromElev, elevFromFSM, orderFinished)
+	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, confOut, confIn, finOut, finIn)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, confIn, elevFromNet, orderFromHandlr, confOut, orderLights)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandlr, orderFromElev, elevFromFSM, finOut)
 
 }

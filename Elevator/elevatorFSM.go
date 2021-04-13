@@ -2,7 +2,6 @@ package Elevator
 
 import (
 	"fmt"
-	"reflect"
 	"time"
 
 	//"../Elevator/elevio"
@@ -55,16 +54,23 @@ func ElevatorFSM(id string, addr string, numFloors int, orderRecieved chan elevi
 
 	go func() { //send elevator status to network
 		sendRate := 50 * time.Millisecond
-		prevElev := *elevPt
-		elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
 		for {
 			time.Sleep(sendRate)
-
-			if !(reflect.DeepEqual(prevElev, *elevPt)) { //burde ikke bare sende en gang, pga packet loss FIX
-				prevElev = *elevPt
-				elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
-			}
+			elevCH <- elevhandler.Elevator{ID: id, Status: *elevPt}
 		}
+
+		/*
+			prevElev := *elevPt
+			elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
+			for {
+				time.Sleep(sendRate)
+
+				if !(reflect.DeepEqual(prevElev, *elevPt)) { //burde ikke bare sende en gang, pga packet loss FIX
+					prevElev = *elevPt
+					elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
+				}
+			}
+		*/
 	}()
 	state := "idle_state"
 
@@ -165,8 +171,6 @@ func stop(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_obstr <-
 	elevPt.Direction = direction
 	timer := time.NewTimer(3 * time.Second)
 
-	elevhandler.ClearOrdersAtFloor(elevPt, finishedOrder)
-
 	for {
 		select {
 		case s := <-drv_stop:
@@ -181,6 +185,7 @@ func stop(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_obstr <-
 				timer = time.NewTimer(3 * time.Second)
 			}
 		case <-timer.C:
+			elevhandler.ClearOrdersAtFloor(elevPt, finishedOrder) //Quickfix, clear orders after door, else order doesn't have time to confirm first when order on same floor. FIX
 			elevio.SetDoorOpenLamp(false)
 			if direction == elevio.MD_Up && elevPt.Endstation > elevPt.Floor {
 				return "moving_up_state"

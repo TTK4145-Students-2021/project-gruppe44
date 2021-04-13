@@ -177,14 +177,12 @@ func OrderHandlerFSM(myID string, newOrder <-chan elevio.ButtonEvent, finishedOr
 	elevMap = make(map[string]elevhandler.ElevatorStatus)
 	for {
 		select {
-		case conf := <-confirmationIn:
-			ConfirmOrder(ordersPt, conf)
 		case o := <-newOrder:
-			ChooseElevator(elevMap, ordersPt, myID, o, orderOut, confirmationOut)
-		case c := <-finishedOrder:
-			ClearOrder(ordersPt, c)
+			ChooseElevator(elevMap, ordersPt, myID, o, orderOut) //, confirmationOut)
 		case e := <-elev:
 			UpdateElevators(elevMap, ordersPt, e)
+		case <-finishedOrder: // empty unused channels
+		case <-confirmationIn:
 		}
 
 	}
@@ -209,7 +207,7 @@ func Wait() {
 // These orders are sent out for the elevator to update it’s lights.
 // The elevator who got the order will send the specific order and an order confirmation as well.
 // Elevators that are not connected will not be taken into consideration.
-func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *HallOrders, myID string, order elevio.ButtonEvent, orderOut chan<- elevio.ButtonEvent, conf chan<- Confirmation) {
+func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *HallOrders, myID string, order elevio.ButtonEvent, orderOut chan<- elevio.ButtonEvent) { //, conf chan<- Confirmation) {
 	//TODO: save to file
 	fmt.Println("Got order request")
 	minCost := 1000000000000000000 //Big number so that the first cost is lower, couldn't use math.Inf(1) because of different types. Fix this
@@ -239,7 +237,7 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Hal
 	}
 	if chosenElev == myID {
 		orderOut <- order
-		conf <- Confirmation{ID: myID, Order: order}
+		//conf <- Confirmation{ID: myID, Order: order}
 		fmt.Println("Took the order")
 	} else {
 		fmt.Println("Didn't take order")
@@ -249,16 +247,16 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Hal
 }
 
 // When an order confirmation is recieved, this function will set that order as confirmed.
-func ConfirmOrder(ordersPt *HallOrders, conf Confirmation) {
-	switch conf.Order.Button {
+func ConfirmOrder(ordersPt *HallOrders, id string, order elevio.ButtonEvent) {
+	switch order.Button {
 	case elevio.BT_HallUp:
-		if ordersPt.Up[conf.Order.Floor].ID == conf.ID {
-			ordersPt.Up[conf.Order.Floor].Confirmed = true
+		if ordersPt.Up[order.Floor].ID == id {
+			ordersPt.Up[order.Floor].Confirmed = true
 			fmt.Println("Confirmed order")
 		}
 	case elevio.BT_HallDown:
-		if ordersPt.Down[conf.Order.Floor].ID == conf.ID {
-			ordersPt.Down[conf.Order.Floor].Confirmed = true
+		if ordersPt.Down[order.Floor].ID == id {
+			ordersPt.Down[order.Floor].Confirmed = true
 			fmt.Println("Confirmed order")
 		}
 	}
@@ -276,8 +274,38 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 	//TODO: save map to file
 	//TODO: check if the elevator has order not in list, if yes add order.
 	elevMap[elev.ID] = elev.Status
-	fmt.Print("Updated elevator Map: ")
-	fmt.Println(elevMap)
+	//fmt.Print("Updated elevator Map: ")
+	//fmt.Println(elevMap)
+	for f := 0; f < len(ordersPt.Down); f++ {
+		switch { //down orders
+		case (elev.ID == ordersPt.Down[f].ID) && ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: //confirmed, not taken -> order is finished
+			ClearOrder(ordersPt, elevio.ButtonEvent{Button: elevio.BT_HallDown, Floor: f})
+
+		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && elev.Status.Orders.Down[f]: //not confirmed and taken -> confirm order
+			ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallDown, Floor: f})
+
+		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: //not confirmed, not taken -> resend if timed out?
+			fmt.Println("Should resend order")
+
+		case (elev.ID != ordersPt.Down[f].ID) && elev.Status.Orders.Down[f]: //order taken, but not in list
+			fmt.Println("Order taken without me knowing")
+
+		}
+		switch { // up orders
+		case (elev.ID == ordersPt.Up[f].ID) && ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]: //confirmed, not taken -> order is finished
+			ClearOrder(ordersPt, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
+
+		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && elev.Status.Orders.Up[f]: //not confirmed and taken -> confirm order
+			ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
+
+		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]: //not confirmed, not taken -> resend if timed out?
+			fmt.Println("Should resend order")
+
+		case (elev.ID != ordersPt.Up[f].ID) && elev.Status.Orders.Up[f]: //order taken, but not in list
+			fmt.Println("Order taken without me knowing")
+
+		}
+	}
 
 }
 

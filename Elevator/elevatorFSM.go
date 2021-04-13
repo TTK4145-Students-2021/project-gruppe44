@@ -5,12 +5,13 @@ import (
 	"reflect"
 	"time"
 
+	//"../Elevator/elevio"
 	"./elevhandler"
 	"./elevinit"
 	"./elevio"
 )
 
-func ElevatorFSM(id string, addr string, numFloors int, orderRecieved <-chan elevio.ButtonEvent, drv_btn chan<- elevio.ButtonEvent, elevCH chan<- elevhandler.Elevator, finishedOrder chan<- elevio.ButtonEvent) { //"localhost:15657"
+func ElevatorFSM(id string, addr string, numFloors int, orderRecieved chan elevio.ButtonEvent, orderOut chan<- elevio.ButtonEvent, elevCH chan<- elevhandler.Elevator, finishedOrder chan<- elevio.ButtonEvent) { //"localhost:15657"
 	//numFloors := 4
 
 	elevio.Init(addr, numFloors)
@@ -18,6 +19,7 @@ func ElevatorFSM(id string, addr string, numFloors int, orderRecieved <-chan ele
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
+	drv_btn := make(chan elevio.ButtonEvent)
 	ordersCH := make(chan elevhandler.Orders)
 
 	go elevio.PollButtons(drv_btn)
@@ -40,6 +42,17 @@ func ElevatorFSM(id string, addr string, numFloors int, orderRecieved <-chan ele
 
 	go updateOrderLights(ordersCH)
 
+	go func() { //only send hall orders to network
+		for {
+			o := <-drv_btn
+			if o.Button == elevio.BT_Cab {
+				orderRecieved <- o //send cab orders directly to this elevator
+			} else {
+				orderOut <- o
+			}
+		}
+	}()
+
 	go func() { //send elevator status to network
 		sendRate := 50 * time.Millisecond
 		prevElev := *elevPt
@@ -47,7 +60,7 @@ func ElevatorFSM(id string, addr string, numFloors int, orderRecieved <-chan ele
 		for {
 			time.Sleep(sendRate)
 
-			if !(reflect.DeepEqual(prevElev, *elevPt)) { //burde ikke bare sende en gang, pga packet loss
+			if !(reflect.DeepEqual(prevElev, *elevPt)) { //burde ikke bare sende en gang, pga packet loss FIX
 				prevElev = *elevPt
 				elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
 			}

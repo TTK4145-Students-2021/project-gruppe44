@@ -216,7 +216,6 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus, myID string, 
 			minCost = cost
 			chosenElev = id
 		}
-
 	}
 	if chosenElev == myID {
 		orderOut <- order

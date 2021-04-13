@@ -16,8 +16,6 @@ import (
 
 func Network(id string, orderRx chan<- elevio.ButtonEvent, orderTx <-chan elevio.ButtonEvent, elevTx <-chan elevhandler.Elevator, elevRx chan<- elevhandler.Elevator,
 	confTx <-chan Orderhandler.Confirmation, confRx chan<- Orderhandler.Confirmation, finTx <-chan elevio.ButtonEvent, finRx chan<- elevio.ButtonEvent) {
-	// Our id can be anything. Here we pass it on the command line, using
-	//  `go run main.go -id=our_id`
 
 	//var id string
 

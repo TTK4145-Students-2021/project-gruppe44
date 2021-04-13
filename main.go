@@ -13,13 +13,49 @@ import (
 	"./Orderhandler"
 )
 
-//Currently, the program starts the elevator and connects it to the network.
-//When a new order is made, a random elevator gets the order.
-//to run the elevator use 'go run main.go --id=our_id'
+/*
+	TODO:
+		Network:
+			Send disconnected flag to orderhandler
+		OrderHandler:
+			Filehandling
+			What happens on disconnect?
+			What happens on reconnect? SyncElevators()
+			Send orderlights to elevatorFSM
+			Init()
+			ResendOrder()
+			UpdateElevators <- add confirmation check, and finished check here (instead of sending them)
+		Elevator:
+			Refactoring (remove uneccesary while loops)
+
+
+
+*/
 
 func main() {
 	numFloors := 4
-	addr := "localhost:15657"
+	//addr := "localhost:15657"
+
+	var addr string // choose addr by '-addr=my_address'
+	flag.StringVar(&addr, "addr", "localhost:15657", "Address of elevator server")
+	flag.Parse()
+
+	// Our id can be anything. Here we pass it on the command line, using
+	//  `go run main.go -id=our_id`
+	var id string
+	flag.StringVar(&id, "id", "", "id of this peer")
+	flag.Parse()
+	// ... or alternatively, we can use the local IP address.
+	// (But since we can run multiple programs on the same PC, we also append the
+	//  process ID)
+	if id == "" {
+		localIP, err := localip.LocalIP()
+		if err != nil {
+			fmt.Println(err)
+			localIP = "DISCONNECTED"
+		}
+		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
+	}
 
 	orderFromNet := make(chan elevio.ButtonEvent)
 	orderFromElev := make(chan elevio.ButtonEvent)
@@ -43,22 +79,6 @@ func main() {
 
 		}()
 	*/
-	var id string
-
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
-
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
-	if id == "" {
-		localIP, err := localip.LocalIP()
-		if err != nil {
-			fmt.Println(err)
-			localIP = "DISCONNECTED"
-		}
-		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
-	}
 
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, confOut, confIn, finOut, finIn)
 	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, confIn, elevFromNet, orderFromHandlr, confOut, orderLights)

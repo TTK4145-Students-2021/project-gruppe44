@@ -3,6 +3,7 @@ package Orderhandler
 import (
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"../Elevator/elevhandler"
@@ -138,6 +139,18 @@ func FileHandler() {
 
 /************** OrderHandler **************/
 
+type Order struct {
+	ID          string //ID of elevator who has the order, empty string if no elevator
+	Confirmed   bool   //true if confirmed, false if else
+	TimeStarted time.Time
+}
+
+type AllOrders struct {
+	Inside []Order /** < The inside panel orders*/
+	Up     []Order /** < The upwards orders from outside */
+	Down   []Order /** < The downwards orders from outside */
+}
+
 var elevMap map[string]elevhandler.ElevatorStatus //map to store all the elevator statuses
 
 // It will receive and keep track of all orders and use a cost function to decide which elevator should take which order.
@@ -151,8 +164,8 @@ func OrderHandlerFSM(myID string, newOrder <-chan elevio.ButtonEvent, finishedOr
 	// Outputs:
 	// Orders struct: A list of all orders, so that the elevator can turn on/off lights.
 	// NewOrder ButtonEvent: The new order, sendt to the elevator who is going to take the order.
-	elevMap = make(map[string]elevhandler.ElevatorStatus)
 
+	elevMap = make(map[string]elevhandler.ElevatorStatus)
 	for {
 		select {
 		case o := <-newOrder:
@@ -187,16 +200,23 @@ func Wait() {
 // Elevators that are not connected will not be taken into consideration.
 func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus, myID string, order elevio.ButtonEvent, orderOut chan<- elevio.ButtonEvent) {
 	//TODO: Add to OrdersAll struct, and save to file
-	//TODO: Add small offset based on id, so that no elevator will have the same cost
 	fmt.Println("Got order request")
 	minCost := 1000000000000000000 //Big number so that the first cost is lower, couldn't use math.Inf(1) because of different types. Fix this
 	var chosenElev string
-	for id, elevStatus := range elevMap {
+	ids := make([]string, 0, len(elevMap))
+	for id := range elevMap {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids) //sorted ids to make sure every elevator chooses the same elev when cost is the same.
+	for i := 0; i < len(elevMap); i++ {
+		id := ids[i]
+		elevStatus := elevMap[ids[i]]
 		cost := CostFunction(order, elevStatus)
 		if (cost < minCost) && elevStatus.IsConnected {
 			minCost = cost
 			chosenElev = id
 		}
+
 	}
 	if chosenElev == myID {
 		orderOut <- order

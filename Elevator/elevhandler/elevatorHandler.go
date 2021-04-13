@@ -1,6 +1,10 @@
 package elevhandler
 
 import (
+	"math"
+	"time"
+
+	//"../../Orderhandler" //fikk error import cycle not allowed
 	"../elevio"
 )
 
@@ -97,4 +101,47 @@ func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.Butt
 		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_HallDown}
 	}
 
+}
+
+func DistanceBetweenFloors(floor1, floor2 int) int { // er veldig stygt men go klagde på "import cycle not allowed",
+	return int(math.Abs(float64(floor1) - float64(floor2))) //så redeklarere funksjonen her, istedenfor å importe orderHandler FIX
+}
+
+// Used to keep track of time for each order,
+// so that a timeout flag occurs when the order has been active for a long time and not finished.
+func OrderTimeoutFlag(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
+
+	// Calculate expected completion time for order
+	timeLimitPerFloor := 5 * time.Second // Might have to adjust this time...
+	numOfFloorsToMove := DistanceBetweenFloors(elevPt.Floor, order.Floor)
+	totalTimeForOrder := timeLimitPerFloor * time.Duration(numOfFloorsToMove)
+
+	time.Sleep(totalTimeForOrder)
+
+	// If elevPT.order == true -> order has not completed, meaning something is wrong. Set TimeoutFlag.
+	switch order.Button {
+	case elevio.BT_Cab:
+
+		if elevPt.Orders.Inside[order.Floor] == true {
+			elevPt.Timeout = true
+		} else {
+			elevPt.Timeout = false
+		}
+
+	case elevio.BT_HallUp:
+
+		if elevPt.Orders.Up[order.Floor] == true {
+			elevPt.Timeout = true
+		} else {
+			elevPt.Timeout = false
+		}
+
+	case elevio.BT_HallDown:
+
+		if elevPt.Orders.Down[order.Floor] == true {
+			elevPt.Timeout = true
+		} else {
+			elevPt.Timeout = false
+		}
+	}
 }

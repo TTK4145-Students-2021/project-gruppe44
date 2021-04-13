@@ -28,8 +28,6 @@ import (
 		Elevator:
 			Refactoring (remove uneccesary while loops)
 
-
-
 */
 
 func main() {
@@ -74,14 +72,11 @@ func main() {
 				case c := <-confOut:
 					confIn <- c
 				}
-
 			}
-
 		}()
 	*/
 
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, confOut, confIn, finOut, finIn)
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, confIn, elevFromNet, orderFromHandlr, confOut, orderLights)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, elevFromNet, orderFromHandlr, orderLights, confIn, confOut)
 	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandlr, orderFromElev, elevFromFSM, finOut)
-
 }

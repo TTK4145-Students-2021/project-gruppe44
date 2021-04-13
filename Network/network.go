@@ -14,8 +14,15 @@ import (
 // Note that all members we want to transmit must be public.
 // Any private members will be received as zero-values.
 
-func Network(id string, orderRx chan<- elevio.ButtonEvent, orderTx <-chan elevio.ButtonEvent, elevTx <-chan elevhandler.Elevator, elevRx chan<- elevhandler.Elevator,
-	confTx <-chan Orderhandler.Confirmation, confRx chan<- Orderhandler.Confirmation, finTx <-chan elevio.ButtonEvent, finRx chan<- elevio.ButtonEvent) {
+func Network(id string,
+			 orderRx chan<- elevio.ButtonEvent,
+			 orderTx <-chan elevio.ButtonEvent,
+			 elevTx <-chan elevhandler.Elevator,
+			 elevRx chan<- elevhandler.Elevator,
+			 confTx <-chan Orderhandler.Confirmation,
+			 confRx chan<- Orderhandler.Confirmation,
+			 finTx <-chan elevio.ButtonEvent,
+			 finRx chan<- elevio.ButtonEvent) {
 
 	//var id string
 

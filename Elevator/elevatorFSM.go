@@ -27,7 +27,7 @@ func ElevatorFSM(id string, addr string, numFloors int, orderRecieved chan elevi
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	myOrders := elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}}
+	myOrders := elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}} //FIX
 	myElevator := elevhandler.ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, IsConnected: true, Direction: elevio.MD_Stop}
 	elevPt := &myElevator
 

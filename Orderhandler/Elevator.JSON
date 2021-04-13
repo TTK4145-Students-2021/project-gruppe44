@@ -1,0 +1,20 @@
+{
+	"Endstation": 0,
+	"Floor": 0,
+	"Timeout": false,
+    "IsConnected": false,
+	"Orders": {
+		"Inside": [
+			false,
+			false,
+			true],
+		"Up": [
+			false,
+			false,
+			false],
+		"Down": [
+			false,
+			false,
+			false]},
+	"Direction": 0
+}

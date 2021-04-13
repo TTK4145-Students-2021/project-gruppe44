@@ -11,8 +11,16 @@ import (
 	"./elevio"
 )
 
-func ElevatorFSM(id string, addr string, numFloors int, orderRecieved chan elevio.ButtonEvent, orderOut chan<- elevio.ButtonEvent, elevCH chan<- elevhandler.Elevator, finishedOrder chan<- elevio.ButtonEvent) { //"localhost:15657"
-	//numFloors := 4
+func ElevatorFSM(id string,
+				 addr string,
+				 numFloors int,
+				 orderRecieved chan elevio.ButtonEvent,
+				 orderOut chan<- elevio.ButtonEvent,
+				 elevCH chan<- elevhandler.Elevator,
+				 finishedOrder chan<- elevio.ButtonEvent) {
+	
+	// "localhost:15657"
+	// numFloors := 4
 
 	elevio.Init(addr, numFloors)
 
@@ -27,8 +35,15 @@ func ElevatorFSM(id string, addr string, numFloors int, orderRecieved chan elevi
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	myOrders := elevhandler.Orders{Inside: []bool{false, false, false, false}, Up: []bool{false, false, false, false}, Down: []bool{false, false, false, false}} //FIX
-	myElevator := elevhandler.ElevatorStatus{Endstation: 0, Orders: myOrders, Floor: 0, IsConnected: true, Direction: elevio.MD_Stop}
+	myOrders := elevhandler.Orders{Inside:	[]bool{false, false, false, false},
+								   Up:		[]bool{false, false, false, false},
+								   Down:	[]bool{false, false, false, false}} //FIX
+	
+	myElevator := elevhandler.ElevatorStatus{Endstation: 0,
+											 Orders:	 myOrders,
+											 Floor:		 0,
+											 IsConnected:true,
+											 Direction:	 elevio.MD_Stop}
 	elevPt := &myElevator
 
 	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt)
@@ -125,7 +140,12 @@ func idle(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, orderCH <-chan
 	}
 }
 
-func moving(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, floorCH <-chan int, orderCH <-chan elevio.ButtonEvent, direction elevio.MotorDirection) string {
+func moving(elevPt *elevhandler.ElevatorStatus,
+			stopCH <-chan bool,
+			floorCH <-chan int,
+			orderCH <-chan elevio.ButtonEvent,
+			direction elevio.MotorDirection) string {
+	
 	elevio.SetMotorDirection(direction)
 	elevPt.Direction = direction
 
@@ -158,7 +178,13 @@ func moving(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, floorCH <-ch
 	}
 }
 
-func stop(elevPt *elevhandler.ElevatorStatus, drv_stop <-chan bool, drv_obstr <-chan bool, orderCH <-chan elevio.ButtonEvent, finishedOrder chan<- elevio.ButtonEvent, direction elevio.MotorDirection) string {
+func stop(elevPt *elevhandler.ElevatorStatus,
+		  drv_stop <-chan bool,
+		  drv_obstr <-chan bool,
+		  orderCH <-chan elevio.ButtonEvent,
+		  finishedOrder chan<- elevio.ButtonEvent,
+		  direction elevio.MotorDirection) string {
+	
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetDoorOpenLamp(true)
 

@@ -90,44 +90,6 @@ func DistanceBetweenFloors(floor1, floor2 int) int {
 	return int(math.Abs(float64(floor1) - float64(floor2)))
 }
 
-// Used to keep track of time for each order,
-// so that a timeout flag occurs when the order has been active for a long time and not finished.
-func OrderTimeoutFlag(elevPt *elevhandler.ElevatorStatus, order elevio.ButtonEvent) {
-
-	// Calculate expected completion time for order
-	timeLimitPerFloor := 5 * time.Second // Might have to adjust this time...
-	numOfFloorsToMove := DistanceBetweenFloors(elevPt.Floor, order.Floor)
-	totalTimeForOrder := timeLimitPerFloor * time.Duration(numOfFloorsToMove)
-
-	time.Sleep(totalTimeForOrder)
-
-	// If elevPT.order == true -> order has not completed, meaning something is wrong. Set TimeoutFlag.
-	switch order.Button {
-	case elevio.BT_Cab:
-
-		if elevPt.Orders.Inside[order.Floor] == true {
-			elevPt.Timeout = true
-		} else {
-			elevPt.Timeout = false
-		}
-
-	case elevio.BT_HallUp:
-
-		if elevPt.Orders.Up[order.Floor] == true {
-			elevPt.Timeout = true
-		} else {
-			elevPt.Timeout = false
-		}
-
-	case elevio.BT_HallDown:
-
-		if elevPt.Orders.Down[order.Floor] == true {
-			elevPt.Timeout = true
-		} else {
-			elevPt.Timeout = false
-		}
-	}
-}
 
 // When the order list is altered we will save the orders to file,
 // this way we always have an updated order list in case of a crash.
@@ -154,7 +116,12 @@ type HallOrders struct {
 var elevMap map[string]elevhandler.ElevatorStatus //map to store all the elevator statuses
 
 // It will receive and keep track of all orders and use a cost function to decide which elevator should take which order.
-func OrderHandlerFSM(myID string, newOrder <-chan elevio.ButtonEvent, finishedOrder <-chan elevio.ButtonEvent, elev <-chan elevhandler.Elevator, orderOut chan<- elevio.ButtonEvent, allOrders chan<- elevhandler.Orders) {
+func OrderHandlerFSM(myID string,
+					 newOrder <-chan elevio.ButtonEvent,
+					 finishedOrder <-chan elevio.ButtonEvent,
+					 elev <-chan elevhandler.Elevator,
+					 orderOut chan<- elevio.ButtonEvent,
+					 allOrders chan<- elevhandler.Orders) {
 	// Inputs:
 	// NewOrder ButtonEvent: This is a new order that should be handled.
 	// FinishedOrder ButtonEvent: This is a finished order that should be cleared.
@@ -178,9 +145,7 @@ func OrderHandlerFSM(myID string, newOrder <-chan elevio.ButtonEvent, finishedOr
 		case e := <-elev:
 			UpdateElevators(elevMap, ordersPt, e)
 		}
-
 	}
-
 }
 
 // When the program turns on, it will load all local data from file.
@@ -201,7 +166,11 @@ func Wait() {
 // These orders are sent out for the elevator to update it’s lights.
 // The elevator who got the order will send the specific order and an order confirmation as well.
 // Elevators that are not connected will not be taken into consideration.
-func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *HallOrders, myID string, order elevio.ButtonEvent, orderOut chan<- elevio.ButtonEvent) {
+func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
+				    ordersPt *HallOrders,
+					myID string,
+					order elevio.ButtonEvent,
+					orderOut chan<- elevio.ButtonEvent) {
 	//TODO: save to file
 	fmt.Println("Got order request")
 	minCost := 1000000000000000000 //Big number so that the first cost is lower, couldn't use math.Inf(1) because of different types. Fix this
@@ -258,7 +227,6 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 	elevMap[elev.ID] = elev.Status
 	fmt.Print("Updated elevator Map: ")
 	fmt.Println(elevMap)
-
 }
 
 // When an old order is finished, this function will clear/update the order table.

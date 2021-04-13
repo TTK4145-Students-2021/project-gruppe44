@@ -1,0 +1,30 @@
+{
+	"Up": [
+        {
+            "ID": "E1",
+            "Confirmed": false
+        },
+        {
+            "ID": "E2",
+            "Confirmed": false
+        },
+        {
+            "ID": "E3",
+            "Confirmed": false
+        }
+    ],
+	"Down": [
+        {
+            "ID": "E1",
+            "Confirmed": false
+        },
+        {
+            "ID": "E2",
+            "Confirmed": false
+        },
+        {
+            "ID": "E3",
+            "Confirmed": false
+        }
+    ]
+}

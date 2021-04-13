@@ -42,45 +42,59 @@ type Elevator struct {
 	Status ElevatorStatus
 }
 
-func AddOrder(elevatorPt *ElevatorStatus, order elevio.ButtonEvent) {
+func AddOrder(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
 	switch order.Button {
 	case elevio.BT_Cab:
-		elevatorPt.Orders.Inside[order.Floor] = true
+		elevPt.Orders.Inside[order.Floor] = true
 	case elevio.BT_HallUp:
-		elevatorPt.Orders.Up[order.Floor] = true
+		elevPt.Orders.Up[order.Floor] = true
 	case elevio.BT_HallDown:
-		elevatorPt.Orders.Down[order.Floor] = true
+		elevPt.Orders.Down[order.Floor] = true
 	}
 }
 
 //ElevatorGetEndstation returns endstation
-func SetEndstation(elevatorPt *ElevatorStatus) {
-	switch elevatorPt.Direction {
+func SetEndstation(elevPt *ElevatorStatus) {
+	switch elevPt.Direction {
 	case elevio.MD_Down: //skiftet down og up
 		for f := numFloors - 1; f >= 0; f-- {
-			if elevatorPt.Orders.Inside[f] || elevatorPt.Orders.Down[f] || elevatorPt.Orders.Up[f] {
-				elevatorPt.Endstation = f
+			if elevPt.Orders.Inside[f] || elevPt.Orders.Down[f] || elevPt.Orders.Up[f] {
+				elevPt.Endstation = f
 			}
 		}
 	case elevio.MD_Up, elevio.MD_Stop: //bias til å gå oppover
 		for f := 0; f < numFloors; f++ {
-			if elevatorPt.Orders.Inside[f] || elevatorPt.Orders.Down[f] || elevatorPt.Orders.Up[f] {
-				elevatorPt.Endstation = f
+			if elevPt.Orders.Inside[f] || elevPt.Orders.Down[f] || elevPt.Orders.Up[f] {
+				elevPt.Endstation = f
 			}
 		}
 
 	}
 }
 
-func ClearOrdersAtFloor(elevatorPt *ElevatorStatus) {
-	elevatorPt.Orders.Inside[elevatorPt.Floor] = false
-	if elevatorPt.Endstation == elevatorPt.Floor {
-		elevatorPt.Orders.Up[elevatorPt.Floor] = false
-		elevatorPt.Orders.Down[elevatorPt.Floor] = false
-	} else if elevatorPt.Direction == elevio.MD_Up {
-		elevatorPt.Orders.Up[elevatorPt.Floor] = false
-	} else {
-		elevatorPt.Orders.Down[elevatorPt.Floor] = false
+func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.ButtonEvent) {
+	/*
+		elevPt.Orders.Inside[elevPt.Floor] = false
+		if elevPt.Endstation == elevPt.Floor {
+			elevPt.Orders.Up[elevPt.Floor] = false
+			elevPt.Orders.Down[elevPt.Floor] = false
+		} else if elevPt.Direction == elevio.MD_Up {
+			elevPt.Orders.Up[elevPt.Floor] = false
+		} else {
+			elevPt.Orders.Down[elevPt.Floor] = false
+		}
+	*/
+	if elevPt.Orders.Inside[elevPt.Floor] {
+		elevPt.Orders.Inside[elevPt.Floor] = false
+		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_Cab}
+	}
+	if (elevPt.Orders.Up[elevPt.Floor]) && ((elevPt.Direction == elevio.MD_Up) || (elevPt.Endstation == elevPt.Floor)) {
+		elevPt.Orders.Up[elevPt.Floor] = false
+		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_HallUp}
+	}
+	if (elevPt.Orders.Down[elevPt.Floor]) && ((elevPt.Direction == elevio.MD_Down) || (elevPt.Endstation == elevPt.Floor)) {
+		elevPt.Orders.Down[elevPt.Floor] = false
+		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_HallDown}
 	}
 
 }

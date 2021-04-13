@@ -219,16 +219,16 @@ func ResendOrder() {
 // And if this elevator has an order that is not in the OrdersAll list, it will add this order.
 func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, elev elevhandler.Elevator) {
 	//TODO: save map to file
+	//TODO: check if the elevator has order not in list, if yes add order.
 	elevMap[elev.ID] = elev.Status
 	fmt.Print("Updated elevator Map: ")
 	fmt.Println(elevMap)
-	//save map to file
 
 }
 
 // When an old order is finished, this function will clear/update the order table.
 func ClearOrder(order elevio.ButtonEvent) {
-
+	fmt.Println("Cleared order")
 }
 
 // When an elevator reconnects after having lost connection,

@@ -58,6 +58,6 @@ func main() {
 
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet)
 	go Orderhandler.OrderHandlerFSM(id, orderFromNet, orderFinished, elevFromNet, orderFromHandlr, orderLights)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandlr, orderFromElev, elevFromFSM)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandlr, orderFromElev, elevFromFSM, orderFinished)
 
 }

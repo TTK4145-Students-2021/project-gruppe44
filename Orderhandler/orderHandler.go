@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"bufio"
+	"encoding/json"
+	"io/ioutil"
+	"os"
 
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"

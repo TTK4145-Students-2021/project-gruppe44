@@ -4,9 +4,14 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"os"
-	"bufio"
-	"json"
+	"time"
+
+	/*
+		"bufio"
+		"encoding/json"
+		"io/ioutil"
+		"os"
+	*/
 
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"
@@ -91,12 +96,12 @@ func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorSt
 func DistanceBetweenFloors(floor1, floor2 int) int {
 	return int(math.Abs(float64(floor1) - float64(floor2)))
 }
-
+/*
 // When the order list is altered we will save the orders to file,
 // this way we always have an updated order list in case of a crash.
 // This file will be loaded on reboot.
 // This module will have the needed functions to save and load the elevator status and order list.
-func FileHandler(elevPt* ElevatorStatus, allOrders* HallOrders) {
+func FileHandler(elevPt* elevhandler.ElevatorStatus, allOrders* HallOrders) {
 	
 	// READ if boot/reboot: Read AllOrders.JSON and ElevatorStatus.JSON then update HallOrders and ElevStatus
 	
@@ -139,13 +144,13 @@ func FileHandler(elevPt* ElevatorStatus, allOrders* HallOrders) {
 		}
 	}
 }
-
+*/
 /************** OrderHandler **************/
 
 type Order struct {
 	ID        string //ID of elevator who has the order, empty string if no elevator
 	Confirmed bool   //true if confirmed, false if else
-	//TimeStarted time.Time //currently unused, but might be used for timeout flag
+	TimeStarted time.Time //currently unused, but might be used for timeout flag
 }
 
 type Confirmation struct {
@@ -167,6 +172,7 @@ func OrderHandlerFSM(myID string,
 	finishedOrder <-chan elevio.ButtonEvent, //brukes ikke
 	elev <-chan elevhandler.Elevator,
 	orderOut chan<- elevio.ButtonEvent,
+	orderResend chan<- elevio.ButtonEvent,
 	allOrders chan<- elevhandler.Orders,
 	confirmationIn <-chan Confirmation, //brukes ikke
 	confirmationOut chan<- Confirmation) { //brukes ikke
@@ -190,9 +196,10 @@ func OrderHandlerFSM(myID string,
 		case o := <-newOrder:
 			ChooseElevator(elevMap, ordersPt, myID, o, orderOut) //, confirmationOut)
 		case e := <-elev:
-			UpdateElevators(elevMap, ordersPt, e)
+			UpdateElevators(elevMap, ordersPt, e, orderResend)
 		case <-finishedOrder: // empty unused channels
 		case <-confirmationIn:
+		//	ConfirmOrder(ordersPt, conf.ID, conf.Order)
 		}
 	}
 }
@@ -278,14 +285,15 @@ func ConfirmOrder(ordersPt *HallOrders, id string, order elevio.ButtonEvent) {
 }
 
 // When an order times out, this function will resend that order to the network module as a new order.
-func ResendOrder() {
-
+func ResendOrder(order elevio.ButtonEvent, orderResend chan<- elevio.ButtonEvent) {
+	//TODO: Clear old order
+	orderResend<-order
 }
 
 // When a new ElevatorStatus or Connection bool is received,
 // this function will save this as local data for the CostFunction() to use.
 // And if this elevator has an order that is not in the OrdersAll list, it will add this order.
-func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *HallOrders, elev elevhandler.Elevator) {
+func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *HallOrders, elev elevhandler.Elevator, orderResend chan<- elevio.ButtonEvent) {
 	//TODO: save map to file
 	//TODO: check if the elevator has order not in list, if yes add order.
 	elevMap[elev.ID] = elev.Status
@@ -301,6 +309,11 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 
 		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: //not confirmed, not taken -> resend if timed out?
 			fmt.Println("Should resend order")
+			threshold := time.Millisecond * 250 // time before resend order
+			if time.Now().After(ordersPt.Down[f].TimeStarted.Add(threshold)){
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
+				ResendOrder(o, orderResend)	
+			}
 
 		case (elev.ID != ordersPt.Down[f].ID) && elev.Status.Orders.Down[f]: //order taken, but not in list
 			if ordersPt.Down[f].ID == "" {

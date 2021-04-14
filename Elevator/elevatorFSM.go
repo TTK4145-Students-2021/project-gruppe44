@@ -45,16 +45,16 @@ func ElevatorFSM(id string,
 	elevPt := &myElevator
 
 	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt)
-	/*
-		ordersCH := make(chan elevhandler.Orders)
-		go func() { //temp, skal få allOrders liste fra handler/network FIX
-			for {
-				time.Sleep(100 * time.Millisecond)
-				ordersCH <- elevPt.Orders
-			}
-		}()
-		go updateOrderLights(ordersCH)
-	*/
+/*
+	ordersCH := make(chan elevhandler.Orders)
+	go func() { //temp, skal få allOrders liste fra handler/network FIX
+		for {
+			time.Sleep(100 * time.Millisecond)
+			ordersCH <- elevPt.Orders
+		}
+	}()
+	go updateOrderLights(ordersCH)
+*/
 	go func() { //only send hall orders to network
 		for {
 			o := <-drv_btn
@@ -200,6 +200,8 @@ func stop(elevPt *elevhandler.ElevatorStatus,
 
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetDoorOpenLamp(true)
+
+	//elevhandler.ClearOrdersAtFloor(elevPt, finishedOrder)
 
 	elevPt.Direction = direction
 	timer := time.NewTimer(3 * time.Second)

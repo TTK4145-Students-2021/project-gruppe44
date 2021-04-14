@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"math"
 	"sort"
+/*
 	"bufio"
 	"encoding/json"
 	"io/ioutil"
 	"os"
-
+*/
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"
 )
@@ -92,7 +93,7 @@ func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorSt
 func DistanceBetweenFloors(floor1, floor2 int) int {
 	return int(math.Abs(float64(floor1) - float64(floor2)))
 }
-
+/*
 // When the order list is altered we will save the orders to file,
 // this way we always have an updated order list in case of a crash.
 // This file will be loaded on reboot.
@@ -140,7 +141,7 @@ func FileHandler(elevPt* ElevatorStatus, allOrders* HallOrders) {
 		}
 	}
 }
-
+*/
 /************** OrderHandler **************/
 
 type Order struct {

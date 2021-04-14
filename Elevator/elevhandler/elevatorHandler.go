@@ -104,7 +104,7 @@ func OrderTimeoutFlag(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
 
 	// Calculate expected completion time for order
 	timeLimitPerFloor := 3 * time.Second // Might have to adjust this time...
-	numOfFloorsToMove := Orderhandler.DistanceBetweenFloors(elevPt.Floor, order.Floor)
+	numOfFloorsToMove := DistanceBetweenFloors(elevPt.Floor, order.Floor)
 	totalTimeForOrder := timeLimitPerFloor * time.Duration(numOfFloorsToMove)
 
 	timer := time.NewTimer(totalTimeForOrder)

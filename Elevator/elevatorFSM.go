@@ -27,7 +27,6 @@ func ElevatorFSM(id string,
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
 	drv_btn := make(chan elevio.ButtonEvent)
-	ordersCH := make(chan elevhandler.Orders)
 
 	go elevio.PollButtons(drv_btn)
 	go elevio.PollFloorSensor(drv_floors)
@@ -46,16 +45,16 @@ func ElevatorFSM(id string,
 	elevPt := &myElevator
 
 	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt)
-
-	go func() { //temp, skal få allOrders liste fra handler/network FIX
-		for {
-			time.Sleep(100 * time.Millisecond)
-			ordersCH <- elevPt.Orders
-		}
-	}()
-
-	go updateOrderLights(ordersCH)
-
+	/*
+		ordersCH := make(chan elevhandler.Orders)
+		go func() { //temp, skal få allOrders liste fra handler/network FIX
+			for {
+				time.Sleep(100 * time.Millisecond)
+				ordersCH <- elevPt.Orders
+			}
+		}()
+		go updateOrderLights(ordersCH)
+	*/
 	go func() { //only send hall orders to network
 		for {
 			o := <-drv_btn
@@ -119,7 +118,6 @@ func ElevatorFSM(id string,
 func idle(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, orderCH <-chan elevio.ButtonEvent) string {
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevPt.Direction = elevio.MD_Stop
-
 	switch { // in case of already order
 	case elevPt.Endstation < elevPt.Floor:
 		return "moving_down_state"
@@ -239,7 +237,7 @@ func emergency_stop() string {
 	return "idle_state" //fiks senere
 }
 
-func updateOrderLights(orders <-chan elevhandler.Orders) {
+func updateOrderLights(orders <-chan elevhandler.Orders) { // usikker på om denne skal være her FIX
 	for {
 		select {
 		case o := <-orders:

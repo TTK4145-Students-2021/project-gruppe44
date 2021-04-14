@@ -27,6 +27,7 @@ import (
 			UpdateElevators <- add confirmation check, and finished check here (instead of sending them)
 		Elevator:
 			Refactoring (remove uneccesary while loops)
+			Emergency stop
 
 */
 

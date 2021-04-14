@@ -51,6 +51,7 @@ func AddOrder(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
 	switch order.Button {
 	case elevio.BT_Cab:
 		elevPt.Orders.Inside[order.Floor] = true
+		elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, true) //FIX evt sett lys et annet sted
 	case elevio.BT_HallUp:
 		elevPt.Orders.Up[order.Floor] = true
 	case elevio.BT_HallDown:
@@ -94,6 +95,7 @@ func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.Butt
 	*/
 	if elevPt.Orders.Inside[elevPt.Floor] {
 		elevPt.Orders.Inside[elevPt.Floor] = false
+		elevio.SetButtonLamp(elevio.BT_Cab, elevPt.Floor, false) //FIX sett lys et annet sted evt
 		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_Cab}
 	}
 	if (elevPt.Orders.Up[elevPt.Floor]) && ((elevPt.Direction == elevio.MD_Up) || (elevPt.Endstation == elevPt.Floor)) {

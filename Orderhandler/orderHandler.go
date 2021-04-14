@@ -219,16 +219,19 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 func ConfirmOrder(ordersPt *HallOrders, id string, order elevio.ButtonEvent) {
 	switch order.Button {
 	case elevio.BT_HallUp:
-		if ordersPt.Up[order.Floor].ID == id {
+		if ordersPt.Up[order.Floor].ID == id { //unødvending if statement nå, legacy code FIX
 			ordersPt.Up[order.Floor].Confirmed = true
 			fmt.Println("Confirmed order")
+			elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
 		}
 	case elevio.BT_HallDown:
 		if ordersPt.Down[order.Floor].ID == id {
 			ordersPt.Down[order.Floor].Confirmed = true
 			fmt.Println("Confirmed order")
+			elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true) // evt set lights et annet sted
 		}
 	}
+
 }
 
 // When an order times out, this function will resend that order to the network module as a new order.
@@ -286,9 +289,19 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 
 }
 
+/*
+func updateHallLights(hallOrders HallOrders) {
+	for f := 0; f < len(o.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
+		//elevio.SetButtonLamp(elevio.BT_Cab, f, cabOrders[f])
+		elevio.SetButtonLamp(elevio.BT_HallUp, f, hallOrders.Up[f].Confirmed)
+		elevio.SetButtonLamp(elevio.BT_HallDown, f, hallOrders.Down[f].Confirmed)
+	}
+}
+*/
 // When an old order is finished, this function will clear/update the order table.
 func ClearOrder(ordersPt *HallOrders, order elevio.ButtonEvent) {
 	//TODO: save order list to file
+	elevio.SetButtonLamp(order.Button, order.Floor, false)
 	switch order.Button {
 	case elevio.BT_HallUp:
 		ordersPt.Up[order.Floor].ID = ""

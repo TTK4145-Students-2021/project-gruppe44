@@ -1,6 +1,7 @@
 package elevhandler
 
 import (
+	"fmt"
 	"math"
 	"time"
 
@@ -55,6 +56,7 @@ func AddOrder(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
 	case elevio.BT_HallDown:
 		elevPt.Orders.Down[order.Floor] = true
 	}
+	SetEndstation(elevPt)
 }
 
 //ElevatorGetEndstation returns endstation
@@ -74,6 +76,8 @@ func SetEndstation(elevPt *ElevatorStatus) {
 		}
 
 	}
+	fmt.Print("set endstation: ")
+	fmt.Println(elevPt.Endstation)
 }
 
 func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.ButtonEvent) {
@@ -100,7 +104,7 @@ func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.Butt
 		elevPt.Orders.Down[elevPt.Floor] = false
 		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_HallDown}
 	}
-
+	SetEndstation(elevPt)
 }
 
 func DistanceBetweenFloors(floor1, floor2 int) int { // er veldig stygt men go klagde på "import cycle not allowed",

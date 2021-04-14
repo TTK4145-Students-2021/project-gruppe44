@@ -257,7 +257,11 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 			fmt.Println("Should resend order")
 
 		case (elev.ID != ordersPt.Down[f].ID) && elev.Status.Orders.Down[f]: //order taken, but not in list
-			fmt.Println("Order taken without me knowing")
+			if ordersPt.Down[f].ID == "" {
+				fmt.Println("Order taken without me knowing")
+			} else {
+				fmt.Println("Several elevators have the same order")
+			}
 
 		}
 		switch { // up orders
@@ -271,7 +275,11 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 			fmt.Println("Should resend order")
 
 		case (elev.ID != ordersPt.Up[f].ID) && elev.Status.Orders.Up[f]: //order taken, but not in list
-			fmt.Println("Order taken without me knowing")
+			if ordersPt.Up[f].ID == "" {
+				fmt.Println("Order taken without me knowing")
+			} else {
+				fmt.Println("Several elevators have the same order")
+			}
 
 		}
 	}

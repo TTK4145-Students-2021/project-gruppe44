@@ -95,8 +95,48 @@ func DistanceBetweenFloors(floor1, floor2 int) int {
 // this way we always have an updated order list in case of a crash.
 // This file will be loaded on reboot.
 // This module will have the needed functions to save and load the elevator status and order list.
-func FileHandler() {
+func FileHandler(elevPt* ElevatorStatus, allOrders* HallOrders) {
+	
+	// READ if boot/reboot: Read AllOrders.JSON and ElevatorStatus.JSON then update HallOrders and ElevStatus
+	
+	// WRITE if new order (READ is always before WRITE!):
+	// 	External elevator: Update AllOrders.JSON
+	// 	This elevator: Update Elevator.JSON
+	// WRITE if elevator order is complete?
 
+	// PSEUDOCODE
+	for {
+		select {
+		case s := <-onStartup: // <-FIX!
+			// Load from JSON files
+			elevatorContent,_ := ioutil.ReadFile("ElevatorStatus.JSON")
+			allOrdersContent,_ := ioutil.ReadFile("AllOrders.JSON")
+			json.Unmarshal(elevatorContent, elevPt)
+			json.Unmarshal(allOrdersContent, allOrders)
+
+		case n := <-networkLoss: // <-FIX!
+			// Load from JSON files
+			allOrdersContent,_ := ioutil.ReadFile("AllOrders.JSON")
+			// json.Unmarshal(elevatorContent, elevPt) // Trenger sikkert ikke å lese fra denne
+			json.Unmarshal(allOrdersContent, allOrders)
+
+		case o := <-updateInternalOrder: // New order, finished order // <-FIX!
+			// Write to ElevatorStatus.JSON file
+			elevatorFile,_ := os.Create("ElevatorStatus.JSON") // Open() is READONLY, Create() for editing
+			elevatorJSONcontent,_ :=json.MarshalIndent(elevPt,"","\t")
+			writeElevatorStatusToJSON := bufio.NewWriter(elevatorFile)
+			writeElevatorStatusToJSON.Write(elevatorJSONcontent)
+			writeElevatorStatusToJSON.Flush()
+			
+		case a := <-updateExternalOrders: // New order, finished order // <-FIX!
+			// Write to AllOrders.JSON file
+			allOrdersFile,_ := os.Create("AllOrders.JSON")
+			allOrdersJSONcontent,_ :=json.MarshalIndent(allOrders,"","\t")
+			writeAllOrdersToJSON := bufio.NewWriter(allOrdersFile)
+			writeAllOrdersToJSON.Write(allOrdersJSONcontent)
+			writeAllOrdersToJSON.Flush()
+		}
+	}
 }
 
 /************** OrderHandler **************/

@@ -15,21 +15,6 @@ type Orders struct {
 	Down   []bool /** < The downwards orders from outside */
 }
 
-/*
-type Order struct {
-	id string // empty if no one has taken it
-	timeStarted int
-
-
-}
-type OrdersAll struct {
-	Inside []Order // < The inside panel orders
-	Up     []Order // < The upwards orders from outside
-	Down   []Order // < The downwards orders from outside
-}
-
-ordersAll.Up = [0, "heis1", "heis2"]
-*/
 type ElevatorStatus struct {
 	Endstation  int
 	Floor       int
@@ -106,36 +91,73 @@ func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.Butt
 func OrderTimeoutFlag(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
 
 	// Calculate expected completion time for order
-	timeLimitPerFloor := 5 * time.Second // Might have to adjust this time...
+	timeLimitPerFloor := 3 * time.Second // Might have to adjust this time...
 	numOfFloorsToMove := Orderhandler.DistanceBetweenFloors(elevPt.Floor, order.Floor)
 	totalTimeForOrder := timeLimitPerFloor * time.Duration(numOfFloorsToMove)
 
-	time.Sleep(totalTimeForOrder)
+	timer := time.NewTimer(totalTimeForOrder)
+	// time.Sleep(totalTimeForOrder)
 
 	// If elevPT.order == true -> order has not completed, meaning something is wrong. Set TimeoutFlag.
-	switch order.Button {
-	case elevio.BT_Cab:
+	for {
+		select {
+		case <-timer.C:
+			switch order.Button {
+				case elevio.BT_Cab:
+			
+					if elevPt.Orders.Inside[order.Floor] == true {
+						elevPt.Timeout = true
+					} else {
+						elevPt.Timeout = false
+					}
+					return
+	
+				case elevio.BT_HallUp:
 
-		if elevPt.Orders.Inside[order.Floor] == true {
-			elevPt.Timeout = true
-		} else {
-			elevPt.Timeout = false
-		}
+					if elevPt.Orders.Up[order.Floor] == true {
+						elevPt.Timeout = true
+					} else {
+						elevPt.Timeout = false
+					}
+					return
 
-	case elevio.BT_HallUp:
+				case elevio.BT_HallDown:
 
-		if elevPt.Orders.Up[order.Floor] == true {
-			elevPt.Timeout = true
-		} else {
-			elevPt.Timeout = false
-		}
-
-	case elevio.BT_HallDown:
-
-		if elevPt.Orders.Down[order.Floor] == true {
-			elevPt.Timeout = true
-		} else {
-			elevPt.Timeout = false
+					if elevPt.Orders.Down[order.Floor] == true {
+						elevPt.Timeout = true
+					} else {
+						elevPt.Timeout = false
+					}
+					return
+			}
+		default:
 		}
 	}
+
+	// If elevPT.order == true -> order has not completed, meaning something is wrong. Set TimeoutFlag.
+	// switch order.Button {
+	// case elevio.BT_Cab:
+
+	// 	if elevPt.Orders.Inside[order.Floor] == true {
+	// 		elevPt.Timeout = true
+	// 	} else {
+	// 		elevPt.Timeout = false
+	// 	}
+
+	// case elevio.BT_HallUp:
+
+	// 	if elevPt.Orders.Up[order.Floor] == true {
+	// 		elevPt.Timeout = true
+	// 	} else {
+	// 		elevPt.Timeout = false
+	// 	}
+
+	// case elevio.BT_HallDown:
+
+	// 	if elevPt.Orders.Down[order.Floor] == true {
+	// 		elevPt.Timeout = true
+	// 	} else {
+	// 		elevPt.Timeout = false
+	// 	}
+	// }
 }

@@ -27,6 +27,7 @@ import (
 			UpdateElevators <- add confirmation check, and finished check here (instead of sending them)
 		Elevator:
 			Refactoring (remove uneccesary while loops)
+			Emergency stop
 
 */
 
@@ -77,6 +78,6 @@ func main() {
 	*/
 
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, confOut, confIn, finOut, finIn)
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, confIn, elevFromNet, orderFromHandlr, confOut, orderLights)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, elevFromNet, orderFromHandlr, orderLights, confIn, confOut)
 	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandlr, orderFromElev, elevFromFSM, finOut)
 }

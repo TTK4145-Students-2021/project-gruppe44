@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"time"
 
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"
@@ -90,7 +89,6 @@ func DistanceBetweenFloors(floor1, floor2 int) int {
 	return int(math.Abs(float64(floor1) - float64(floor2)))
 }
 
-
 // When the order list is altered we will save the orders to file,
 // this way we always have an updated order list in case of a crash.
 // This file will be loaded on reboot.
@@ -162,11 +160,13 @@ var elevMap map[string]elevhandler.ElevatorStatus //map to store all the elevato
 
 // It will receive and keep track of all orders and use a cost function to decide which elevator should take which order.
 func OrderHandlerFSM(myID string,
-					 newOrder <-chan elevio.ButtonEvent,
-					 finishedOrder <-chan elevio.ButtonEvent,
-					 elev <-chan elevhandler.Elevator,
-					 orderOut chan<- elevio.ButtonEvent,
-					 allOrders chan<- elevhandler.Orders) {
+	newOrder <-chan elevio.ButtonEvent,
+	finishedOrder <-chan elevio.ButtonEvent, //brukes ikke
+	elev <-chan elevhandler.Elevator,
+	orderOut chan<- elevio.ButtonEvent,
+	allOrders chan<- elevhandler.Orders,
+	confirmationIn <-chan Confirmation, //brukes ikke
+	confirmationOut chan<- Confirmation) { //brukes ikke
 	// Inputs:
 	// NewOrder ButtonEvent: This is a new order that should be handled.
 	// FinishedOrder ButtonEvent: This is a finished order that should be cleared.
@@ -184,14 +184,12 @@ func OrderHandlerFSM(myID string,
 	elevMap = make(map[string]elevhandler.ElevatorStatus)
 	for {
 		select {
-		case conf := <-confirmationIn:
-			ConfirmOrder(ordersPt, conf)
 		case o := <-newOrder:
-			ChooseElevator(elevMap, ordersPt, myID, o, orderOut, confirmationOut)
-		case c := <-finishedOrder:
-			ClearOrder(ordersPt, c)
+			ChooseElevator(elevMap, ordersPt, myID, o, orderOut) //, confirmationOut)
 		case e := <-elev:
 			UpdateElevators(elevMap, ordersPt, e)
+		case <-finishedOrder: // empty unused channels
+		case <-confirmationIn:
 		}
 	}
 }
@@ -215,10 +213,10 @@ func Wait() {
 // The elevator who got the order will send the specific order and an order confirmation as well.
 // Elevators that are not connected will not be taken into consideration.
 func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
-				    ordersPt *HallOrders,
-					myID string,
-					order elevio.ButtonEvent,
-					orderOut chan<- elevio.ButtonEvent) {
+	ordersPt *HallOrders,
+	myID string,
+	order elevio.ButtonEvent,
+	orderOut chan<- elevio.ButtonEvent) {
 	//TODO: save to file
 	fmt.Println("Got order request")
 	minCost := 1000000000000000000 //Big number so that the first cost is lower, couldn't use math.Inf(1) because of different types. Fix this
@@ -248,7 +246,7 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	}
 	if chosenElev == myID {
 		orderOut <- order
-		conf <- Confirmation{ID: myID, Order: order}
+		//conf <- Confirmation{ID: myID, Order: order}
 		fmt.Println("Took the order")
 	} else {
 		fmt.Println("Didn't take order")
@@ -258,19 +256,22 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 }
 
 // When an order confirmation is recieved, this function will set that order as confirmed.
-func ConfirmOrder(ordersPt *HallOrders, conf Confirmation) {
-	switch conf.Order.Button {
+func ConfirmOrder(ordersPt *HallOrders, id string, order elevio.ButtonEvent) {
+	switch order.Button {
 	case elevio.BT_HallUp:
-		if ordersPt.Up[conf.Order.Floor].ID == conf.ID {
-			ordersPt.Up[conf.Order.Floor].Confirmed = true
+		if ordersPt.Up[order.Floor].ID == id { //unødvending if statement nå, legacy code FIX
+			ordersPt.Up[order.Floor].Confirmed = true
 			fmt.Println("Confirmed order")
+			elevio.SetButtonLamp(elevio.BT_HallUp, order.Floor, true)
 		}
 	case elevio.BT_HallDown:
-		if ordersPt.Down[conf.Order.Floor].ID == conf.ID {
-			ordersPt.Down[conf.Order.Floor].Confirmed = true
+		if ordersPt.Down[order.Floor].ID == id {
+			ordersPt.Down[order.Floor].Confirmed = true
 			fmt.Println("Confirmed order")
+			elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true) // evt set lights et annet sted
 		}
 	}
+
 }
 
 // When an order times out, this function will resend that order to the network module as a new order.
@@ -285,13 +286,62 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 	//TODO: save map to file
 	//TODO: check if the elevator has order not in list, if yes add order.
 	elevMap[elev.ID] = elev.Status
-	fmt.Print("Updated elevator Map: ")
-	fmt.Println(elevMap)
+	//fmt.Print("Updated elevator Map: ")
+	//fmt.Println(elevMap)
+	for f := 0; f < len(ordersPt.Down); f++ {
+		switch { //down orders
+		case (elev.ID == ordersPt.Down[f].ID) && ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: //confirmed, not taken -> order is finished
+			ClearOrder(ordersPt, elevio.ButtonEvent{Button: elevio.BT_HallDown, Floor: f})
+
+		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && elev.Status.Orders.Down[f]: //not confirmed and taken -> confirm order
+			ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallDown, Floor: f})
+
+		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: //not confirmed, not taken -> resend if timed out?
+			fmt.Println("Should resend order")
+
+		case (elev.ID != ordersPt.Down[f].ID) && elev.Status.Orders.Down[f]: //order taken, but not in list
+			if ordersPt.Down[f].ID == "" {
+				fmt.Println("Order taken without me knowing")
+			} else {
+				fmt.Println("Several elevators have the same order")
+			}
+
+		}
+		switch { // up orders
+		case (elev.ID == ordersPt.Up[f].ID) && ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]: //confirmed, not taken -> order is finished
+			ClearOrder(ordersPt, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
+
+		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && elev.Status.Orders.Up[f]: //not confirmed and taken -> confirm order
+			ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
+
+		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]: //not confirmed, not taken -> resend if timed out?
+			fmt.Println("Should resend order")
+
+		case (elev.ID != ordersPt.Up[f].ID) && elev.Status.Orders.Up[f]: //order taken, but not in list
+			if ordersPt.Up[f].ID == "" {
+				fmt.Println("Order taken without me knowing")
+			} else {
+				fmt.Println("Several elevators have the same order")
+			}
+
+		}
+	}
+
 }
 
+/*
+func updateHallLights(hallOrders HallOrders) {
+	for f := 0; f < len(o.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
+		//elevio.SetButtonLamp(elevio.BT_Cab, f, cabOrders[f])
+		elevio.SetButtonLamp(elevio.BT_HallUp, f, hallOrders.Up[f].Confirmed)
+		elevio.SetButtonLamp(elevio.BT_HallDown, f, hallOrders.Down[f].Confirmed)
+	}
+}
+*/
 // When an old order is finished, this function will clear/update the order table.
 func ClearOrder(ordersPt *HallOrders, order elevio.ButtonEvent) {
 	//TODO: save order list to file
+	elevio.SetButtonLamp(order.Button, order.Floor, false)
 	switch order.Button {
 	case elevio.BT_HallUp:
 		ordersPt.Up[order.Floor].ID = ""

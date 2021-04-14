@@ -1,9 +1,12 @@
 package elevhandler
 
 import (
-	"../elevio"
-	"../../Orderhandler"
+	"fmt"
+	"math"
 	"time"
+
+	//"../../Orderhandler" //fikk error import cycle not allowed
+	"../elevio"
 )
 
 var numFloors int = 4
@@ -33,11 +36,13 @@ func AddOrder(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
 	switch order.Button {
 	case elevio.BT_Cab:
 		elevPt.Orders.Inside[order.Floor] = true
+		elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, true) //FIX evt sett lys et annet sted
 	case elevio.BT_HallUp:
 		elevPt.Orders.Up[order.Floor] = true
 	case elevio.BT_HallDown:
 		elevPt.Orders.Down[order.Floor] = true
 	}
+	SetEndstation(elevPt)
 }
 
 //ElevatorGetEndstation returns endstation
@@ -57,6 +62,8 @@ func SetEndstation(elevPt *ElevatorStatus) {
 		}
 
 	}
+	fmt.Print("set endstation: ")
+	fmt.Println(elevPt.Endstation)
 }
 
 func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.ButtonEvent) {
@@ -73,6 +80,7 @@ func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.Butt
 	*/
 	if elevPt.Orders.Inside[elevPt.Floor] {
 		elevPt.Orders.Inside[elevPt.Floor] = false
+		elevio.SetButtonLamp(elevio.BT_Cab, elevPt.Floor, false) //FIX sett lys et annet sted evt
 		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_Cab}
 	}
 	if (elevPt.Orders.Up[elevPt.Floor]) && ((elevPt.Direction == elevio.MD_Up) || (elevPt.Endstation == elevPt.Floor)) {
@@ -83,7 +91,11 @@ func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.Butt
 		elevPt.Orders.Down[elevPt.Floor] = false
 		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_HallDown}
 	}
+	SetEndstation(elevPt)
+}
 
+func DistanceBetweenFloors(floor1, floor2 int) int { // er veldig stygt men go klagde på "import cycle not allowed",
+	return int(math.Abs(float64(floor1) - float64(floor2))) //så redeklarere funksjonen her, istedenfor å importe orderHandler FIX
 }
 
 // Used to keep track of time for each order,

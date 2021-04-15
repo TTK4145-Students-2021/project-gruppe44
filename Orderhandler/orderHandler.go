@@ -98,58 +98,81 @@ func DistanceBetweenFloors(floor1, floor2 int) int {
 // this way we always have an updated order list in case of a crash.
 // This file will be loaded on reboot.
 // This module will have the needed functions to save and load the elevator status and order list.
-// func FileHandler(elevPt* elevhandler.ElevatorStatus, allOrders* HallOrders) {
-func FileHandler(onStartup <-chan bool,
-				 networkLoss <-chan bool,
+func FileHandler(elevatorAfterStartup <-chan bool,
+				 elevCH chan<- elevhandler.ElevatorStatus,
+				 ordersCH chan<- HallOrders,
+				 otherOrdersAfterNetworkLoss <-chan HallOrders,
 				 updateInternalOrder <-chan map[string]elevhandler.ElevatorStatus,
-				 updateExternalOrder <-chan HallOrders) {
+				 updateExternalOrders <-chan HallOrders,
+				 elev elevhandler.Elevator) {
 	
-	// Kanskje ta inn følgende: 
-	// elevatorOnStartup <-chan map[string]elevhandler.ElevatorStatus  : e	:= <-elevatorOnStartup // droppe denne, trenger ikke å endre noe?
-	// allOrdersOnNetworkLoss <-chan HallOrders					    : a	:= <-allOrdersOnNetworkLoss
-	// updateElevatorOrder <-chan map[string]elevhandler.ElevatorStatus: u := <-updateElevatorOrder
-	// updateAllOrders <-chan HallOrders					    		: a	:= <-updateAllOrders
+	// READ only happens on boot/reboot. We then READ the following:
+	// - ElevatorStatus.JSON (Might be unnecessary if it remembers what buttons people have pushed in the elevator somewhere else)
+	// - AllOrders.JSON
+	// When this happens, it sends HallOrders and ElevatorStatus out of this function as channels
 
-	// READ if boot/reboot: Read AllOrders.JSON and ElevatorStatus.JSON then update HallOrders and ElevStatus
+	// WRITE happens on new order, completion of order, and after network loss. We then WRITE to the following:
+	// - ElevatorStatus.JSON (Might be unnecessary if it remembers what buttons people have pushed in the elevator somewhere else)
+	// - AllOrders.JSON
 	
-	// WRITE if new order (READ is always before WRITE!):
-	// 	External elevator: Update AllOrders.JSON
-	// 	This elevator: Update Elevator.JSON
-	// WRITE if elevator order is complete?
+	// TODO:
+	// We might combine otherOrdersAfterNetworkLoss and updateExternalOrders to the same case,
+	// because they are identical in logic (redundant)
 
-	// Open() is READONLY, Create() for editing files
+	// NOTE TO SELF:
+	// - Open() is READONLY
+	// - Create() for editing (overwrites everything from before)
 
-	// PSEUDOCODE
+	var elevTemp elevhandler.ElevatorStatus
+	var ordersTemp HallOrders
+
 	for {
 		select {
-		case o := <-onStartup: // <-FIX!
-			// Load from JSON files
-			elevatorContent,_ := ioutil.ReadFile("ElevatorStatus.JSON")
-			allOrdersContent,_ := ioutil.ReadFile("AllOrders.JSON")
-			json.Unmarshal(elevatorContent, elevPt)
-			json.Unmarshal(allOrdersContent, allOrders)
+		case <-elevatorAfterStartup:
+		// Load from JSON files and send values out of Filehandler as channels
+		elevatorContent,_ := ioutil.ReadFile("ElevatorStatus.JSON")
+		allOrdersContent,_ := ioutil.ReadFile("AllOrders.JSON")
 
-		case n := <-networkLoss: // <-FIX!
-			// Load from JSON files
-			allOrdersContent,_ := ioutil.ReadFile("AllOrders.JSON")
-			// json.Unmarshal(elevatorContent, elevPt) // Trenger sikkert ikke å lese fra denne
-			json.Unmarshal(allOrdersContent, allOrders)
+		// [norsk] På denne måten slipper man å modifisere faktiske statuser/pekere i Filehandleren
+		json.Unmarshal(elevatorContent, &elevTemp)
+		json.Unmarshal(allOrdersContent, &ordersTemp)
 
-		case i := <-updateInternalOrder: // New order, finished order // <-FIX!
-			// Write to ElevatorStatus.JSON file
-			elevatorFile,_ := os.Create("ElevatorStatus.JSON")
-			elevatorJSONcontent,_ :=json.MarshalIndent(elevPt,"","\t")
-			writeElevatorStatusToJSON := bufio.NewWriter(elevatorFile)
-			writeElevatorStatusToJSON.Write(elevatorJSONcontent)
-			writeElevatorStatusToJSON.Flush()
-			
-		case e := <-updateExternalOrders: // New order, finished order // <-FIX!
-			// Write to AllOrders.JSON file
-			allOrdersFile,_ := os.Create("AllOrders.JSON")
-			allOrdersJSONcontent,_ :=json.MarshalIndent(allOrders,"","\t")
-			writeAllOrdersToJSON := bufio.NewWriter(allOrdersFile)
-			writeAllOrdersToJSON.Write(allOrdersJSONcontent)
-			writeAllOrdersToJSON.Flush()
+		elevCH <-elevTemp
+		ordersCH <-ordersTemp
+
+		case hall := <-otherOrdersAfterNetworkLoss: 
+		// Updates AllOrders.JSON because of network loss.
+		// Suggestion: 
+		// - Might make this happen on: new order, finished order and after network loss
+		// Send content from hall to ordersCH were some other function modifies the actual AllOrderslist
+		// ^^ This line above might already be done somewhere else, therefore unnecessary?
+		allOrdersFile,_ := os.Create("AllOrders.JSON")
+		allOrdersJSONcontent,_ :=json.MarshalIndent(hall,"","\t")
+		writeAllOrdersToJSON := bufio.NewWriter(allOrdersFile)
+		writeAllOrdersToJSON.Write(allOrdersJSONcontent)
+		writeAllOrdersToJSON.Flush()
+
+		case h := <-updateExternalOrders: 
+		// ^^ Might remove this cause it is similar to the one above
+		// Updates AllOrders.JSON file with updateInternalOrder
+		// Might be unnecessary to send a channel
+		allOrdersFile,_ := os.Create("AllOrders.JSON")
+		allOrdersJSONcontent,_ :=json.MarshalIndent(h,"","\t")
+		writeAllOrdersToJSON := bufio.NewWriter(allOrdersFile)
+		writeAllOrdersToJSON.Write(allOrdersJSONcontent)
+		writeAllOrdersToJSON.Flush()
+
+		case e := <-updateInternalOrder:
+		// ^^ Might remove this cause it might be unnecessary?
+		// Happens on: new order, finished order
+		// Updates ElevatorStatus.JSON file with updateInternalOrder
+		// Assumes this elevator and not another one
+		// Might be unnecesary to send a channel
+		elevatorFile,_ := os.Create("ElevatorStatus.JSON")
+		elevatorJSONcontent,_ :=json.MarshalIndent(e[elev.ID],"","\t")
+		writeElevatorStatusToJSON := bufio.NewWriter(elevatorFile)
+		writeElevatorStatusToJSON.Write(elevatorJSONcontent)
+		writeElevatorStatusToJSON.Flush()
 		}
 	}
 }

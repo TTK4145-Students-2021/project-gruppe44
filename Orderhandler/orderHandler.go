@@ -251,8 +251,10 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	switch order.Button {
 	case elevio.BT_HallUp:
 		ordersPt.Up[order.Floor].ID = chosenElev
+		ordersPt.Up[order.Floor].TimeStarted = time.Now()
 	case elevio.BT_HallDown:
 		ordersPt.Down[order.Floor].ID = chosenElev
+		ordersPt.Down[order.Floor].TimeStarted = time.Now()
 	}
 	if chosenElev == myID {
 		orderOut <- order
@@ -278,16 +280,18 @@ func ConfirmOrder(ordersPt *HallOrders, id string, order elevio.ButtonEvent) {
 		if ordersPt.Down[order.Floor].ID == id {
 			ordersPt.Down[order.Floor].Confirmed = true
 			fmt.Println("Confirmed order")
-			elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true) // evt set lights et annet sted
+			elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true) // evt set lights et annet sted FIX
 		}
 	}
 
 }
 
 // When an order times out, this function will resend that order to the network module as a new order.
-func ResendOrder(order elevio.ButtonEvent, orderResend chan<- elevio.ButtonEvent) {
+func ResendOrder(ordersPt *HallOrders, order elevio.ButtonEvent, orderResend chan<- elevio.ButtonEvent) {
 	//TODO: Clear old order
+	ClearOrder(ordersPt, order)
 	orderResend<-order
+	fmt.Println("Resendt order")
 }
 
 // When a new ElevatorStatus or Connection bool is received,
@@ -309,17 +313,19 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 
 		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: //not confirmed, not taken -> resend if timed out?
 			fmt.Println("Should resend order")
-			threshold := time.Millisecond * 250 // time before resend order
+			threshold := time.Millisecond * 250 // time given to confirm order
 			if time.Now().After(ordersPt.Down[f].TimeStarted.Add(threshold)){
 				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
-				ResendOrder(o, orderResend)	
+				ResendOrder(ordersPt ,o, orderResend)	
 			}
-
 		case (elev.ID != ordersPt.Down[f].ID) && elev.Status.Orders.Down[f]: //order taken, but not in list
 			if ordersPt.Down[f].ID == "" {
 				fmt.Println("Order taken without me knowing")
+				ordersPt.Down[f].ID = elev.ID	//assign order maybe confirm order aswell? FIX
 			} else {
 				fmt.Println("Several elevators have the same order")
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
+				ResendOrder(ordersPt ,o, orderResend) //maybe not resend? FIX
 			}
 
 		}
@@ -332,12 +338,20 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 
 		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]: //not confirmed, not taken -> resend if timed out?
 			fmt.Println("Should resend order")
+			threshold := time.Millisecond * 250 // time before resend order
+			if time.Now().After(ordersPt.Up[f].TimeStarted.Add(threshold)){
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallUp}
+				ResendOrder(ordersPt ,o, orderResend)	
+			}
 
 		case (elev.ID != ordersPt.Up[f].ID) && elev.Status.Orders.Up[f]: //order taken, but not in list
 			if ordersPt.Up[f].ID == "" {
 				fmt.Println("Order taken without me knowing")
+				ordersPt.Up[f].ID = elev.ID	//assign order maybe confirm order aswell? FIX
 			} else {
 				fmt.Println("Several elevators have the same order")
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallUp}
+				ResendOrder(ordersPt ,o, orderResend)
 			}
 
 		}

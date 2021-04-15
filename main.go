@@ -18,7 +18,7 @@ import (
 		Network:
 			Send disconnected flag to orderhandler
 		OrderHandler:
-			Filehandling
+			Filehandling: Integrate in rest of code
 			What happens on disconnect?
 			What happens on reconnect? SyncElevators()
 			Send orderlights to elevatorFSM
@@ -45,6 +45,7 @@ func main() {
 	var id string
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
+	
 	// ... or alternatively, we can use the local IP address.
 	// (But since we can run multiple programs on the same PC, we also append the process ID)
 	if id == "" {
@@ -66,6 +67,7 @@ func main() {
 	orderFromNet	:= make(chan elevio.ButtonEvent)
 	confIn			:= make(chan Orderhandler.Confirmation)
 	confOut			:= make(chan Orderhandler.Confirmation)
+	
 	/*
 		go func() { //temp for å tømme ubrukte channels
 			for {
@@ -77,7 +79,7 @@ func main() {
 		}()
 	*/
 
-	go Network.Network(id, orderFromNet, orderFromElev, elevFromNet, elevFromFSM, confIn, confOut, finIn, finOut)
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, elevFromNet, orderFromHandler, orderLights, confIn, confOut)
+	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, confOut, confIn, finOut, finIn)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, elevFromNet, orderFromHandler, orderFromElev, orderLights, confIn, confOut)
 	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, finOut)
 }

@@ -17,13 +17,13 @@ import (
 func Network(id string,
 			 orderRx chan<- elevio.ButtonEvent,
 			 orderTx <-chan elevio.ButtonEvent,
-			 elevRx chan<- elevhandler.Elevator,
 			 elevTx <-chan elevhandler.Elevator,
-			 confRx chan<- Orderhandler.Confirmation,
+			 elevRx chan<- elevhandler.Elevator,
 			 confTx <-chan Orderhandler.Confirmation,
-			 finRx chan<- elevio.ButtonEvent,
-			 finTx <-chan elevio.ButtonEvent){
-
+			 confRx chan<- Orderhandler.Confirmation,
+			 finTx <-chan elevio.ButtonEvent,
+			 finRx chan<- elevio.ButtonEvent) {
+	
 	//var id string
 
 	// We make a channel for receiving updates on the id's of the peers that are

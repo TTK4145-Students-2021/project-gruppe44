@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	//"../../Orderhandler" //fikk error import cycle not allowed
+	//"../../Orderhandler" //fikk error import cycle not allowed. Respons: fml
 	"../elevio"
 )
 
@@ -60,7 +60,6 @@ func SetEndstation(elevPt *ElevatorStatus) {
 				elevPt.Endstation = f
 			}
 		}
-
 	}
 	fmt.Print("set endstation: ")
 	fmt.Println(elevPt.Endstation)

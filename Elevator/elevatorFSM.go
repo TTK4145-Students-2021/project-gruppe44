@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	//"../Elevator/elevio"
 	"./elevhandler"
 	"./elevinit"
 	"./elevio"
@@ -23,38 +22,40 @@ func ElevatorFSM(id string,
 
 	elevio.Init(addr, numFloors)
 
-	drv_floors := make(chan int)
-	drv_obstr := make(chan bool)
-	drv_stop := make(chan bool)
-	drv_btn := make(chan elevio.ButtonEvent)
+	drv_floors	:= make(chan int)
+	drv_obstr	:= make(chan bool)
+	drv_stop	:= make(chan bool)
+	drv_btn		:= make(chan elevio.ButtonEvent)
 
 	go elevio.PollButtons(drv_btn)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	myOrders := elevhandler.Orders{Inside: []bool{false, false, false, false},
-		Up:   []bool{false, false, false, false},
-		Down: []bool{false, false, false, false}} //FIX
+	myOrders := elevhandler.Orders{Inside:	[]bool{false, false, false, false},
+								   Up:		[]bool{false, false, false, false},
+								   Down:	[]bool{false, false, false, false}} //FIX
 
 	myElevator := elevhandler.ElevatorStatus{Endstation: 0,
-		Orders:      myOrders,
-		Floor:       0,
-		IsConnected: true,
-		Direction:   elevio.MD_Stop}
+											 Orders:	 myOrders,
+											 Floor:		 0,
+											 IsConnected:true,
+											 Direction:	 elevio.MD_Stop}
 	elevPt := &myElevator
 
 	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt)
+
 	/*
-		ordersCH := make(chan elevhandler.Orders)
-		go func() { //temp, skal få allOrders liste fra handler/network FIX
-			for {
-				time.Sleep(100 * time.Millisecond)
-				ordersCH <- elevPt.Orders
-			}
-		}()
-		go updateOrderLights(ordersCH)
+	ordersCH := make(chan elevhandler.Orders)
+	go func() { //temp, skal få allOrders liste fra handler/network FIX
+		for {
+			time.Sleep(100 * time.Millisecond)
+			ordersCH <- elevPt.Orders
+		}
+	}()
+	go updateOrderLights(ordersCH)
 	*/
+	
 	go func() { //only send hall orders to network
 		for {
 			o := <-drv_btn
@@ -192,14 +193,16 @@ func moving(elevPt *elevhandler.ElevatorStatus,
 }
 
 func stop(elevPt *elevhandler.ElevatorStatus,
-	drv_stop <-chan bool,
-	drv_obstr <-chan bool,
-	orderCH <-chan elevio.ButtonEvent,
-	finishedOrder chan<- elevio.ButtonEvent,
-	direction elevio.MotorDirection) string {
+		  drv_stop <-chan bool,
+		  drv_obstr <-chan bool,
+		  orderCH <-chan elevio.ButtonEvent,
+		  finishedOrder chan<- elevio.ButtonEvent,
+		  direction elevio.MotorDirection) string {
 
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetDoorOpenLamp(true)
+
+	//elevhandler.ClearOrdersAtFloor(elevPt, finishedOrder)
 
 	elevPt.Direction = direction
 	timer := time.NewTimer(3 * time.Second)

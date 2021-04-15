@@ -19,24 +19,25 @@ import (
 // NOTE:
 // testbranch vs masterbranch
 
+
 // We assume that the person waits for the assigned elevator
 // Do we need a condition where it is in MD_STOP mode?
 // The distances are complicated expressions
 func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorStatus) int {
-	distToRequest := DistanceBetweenFloors(elevStatus.Floor, orderReq.Floor)
-	distToEndstation := DistanceBetweenFloors(elevStatus.Floor, elevStatus.Endstation)
-	distFromEndstationToRequest := DistanceBetweenFloors(elevStatus.Endstation, orderReq.Floor)
-	distTotal := distFromEndstationToRequest + distToEndstation
+	distToRequest				:= DistanceBetweenFloors(elevStatus.Floor, orderReq.Floor)
+	distToEndstation			:= DistanceBetweenFloors(elevStatus.Floor, elevStatus.Endstation)
+	distFromEndstationToRequest	:= DistanceBetweenFloors(elevStatus.Endstation, orderReq.Floor)
+	distTotal					:= distFromEndstationToRequest + distToEndstation
 
 	// Boolean expressions:
-	elevFloorUNDER := (elevStatus.Floor < orderReq.Floor)
-	elevFloorOVER := (elevStatus.Floor > orderReq.Floor)
-	elevDirUP := (elevStatus.Direction == elevio.MD_Up)
-	elevDirDOWN := (elevStatus.Direction == elevio.MD_Down)
-	orderReqUP := (orderReq.Button == elevio.BT_HallUp)
-	orderReqDOWN := (orderReq.Button == elevio.BT_HallDown)
-	endStationUNDER := (elevStatus.Endstation < orderReq.Floor)
-	endStationOVER := (elevStatus.Endstation > orderReq.Floor)
+	elevFloorUNDER	:= (elevStatus.Floor < orderReq.Floor)
+	elevFloorOVER	:= (elevStatus.Floor > orderReq.Floor)
+	elevDirUP		:= (elevStatus.Direction == elevio.MD_Up)
+	elevDirDOWN		:= (elevStatus.Direction == elevio.MD_Down)
+	orderReqUP		:= (orderReq.Button == elevio.BT_HallUp)
+	orderReqDOWN	:= (orderReq.Button == elevio.BT_HallDown)
+	endStationUNDER	:= (elevStatus.Endstation < orderReq.Floor)
+	endStationOVER	:= (elevStatus.Endstation > orderReq.Floor)
 
 	if elevFloorUNDER {
 		if elevDirUP && orderReqUP {
@@ -97,8 +98,18 @@ func DistanceBetweenFloors(floor1, floor2 int) int {
 // this way we always have an updated order list in case of a crash.
 // This file will be loaded on reboot.
 // This module will have the needed functions to save and load the elevator status and order list.
-func FileHandler(elevPt* ElevatorStatus, allOrders* HallOrders) {
+// func FileHandler(elevPt* elevhandler.ElevatorStatus, allOrders* HallOrders) {
+func FileHandler(onStartup <-chan bool,
+				 networkLoss <-chan bool,
+				 updateInternalOrder <-chan map[string]elevhandler.ElevatorStatus,
+				 updateExternalOrder <-chan HallOrders) {
 	
+	// Kanskje ta inn følgende: 
+	// elevatorOnStartup <-chan map[string]elevhandler.ElevatorStatus  : e	:= <-elevatorOnStartup // droppe denne, trenger ikke å endre noe?
+	// allOrdersOnNetworkLoss <-chan HallOrders					    : a	:= <-allOrdersOnNetworkLoss
+	// updateElevatorOrder <-chan map[string]elevhandler.ElevatorStatus: u := <-updateElevatorOrder
+	// updateAllOrders <-chan HallOrders					    		: a	:= <-updateAllOrders
+
 	// READ if boot/reboot: Read AllOrders.JSON and ElevatorStatus.JSON then update HallOrders and ElevStatus
 	
 	// WRITE if new order (READ is always before WRITE!):
@@ -106,10 +117,12 @@ func FileHandler(elevPt* ElevatorStatus, allOrders* HallOrders) {
 	// 	This elevator: Update Elevator.JSON
 	// WRITE if elevator order is complete?
 
+	// Open() is READONLY, Create() for editing files
+
 	// PSEUDOCODE
 	for {
 		select {
-		case s := <-onStartup: // <-FIX!
+		case o := <-onStartup: // <-FIX!
 			// Load from JSON files
 			elevatorContent,_ := ioutil.ReadFile("ElevatorStatus.JSON")
 			allOrdersContent,_ := ioutil.ReadFile("AllOrders.JSON")
@@ -122,15 +135,15 @@ func FileHandler(elevPt* ElevatorStatus, allOrders* HallOrders) {
 			// json.Unmarshal(elevatorContent, elevPt) // Trenger sikkert ikke å lese fra denne
 			json.Unmarshal(allOrdersContent, allOrders)
 
-		case o := <-updateInternalOrder: // New order, finished order // <-FIX!
+		case i := <-updateInternalOrder: // New order, finished order // <-FIX!
 			// Write to ElevatorStatus.JSON file
-			elevatorFile,_ := os.Create("ElevatorStatus.JSON") // Open() is READONLY, Create() for editing
+			elevatorFile,_ := os.Create("ElevatorStatus.JSON")
 			elevatorJSONcontent,_ :=json.MarshalIndent(elevPt,"","\t")
 			writeElevatorStatusToJSON := bufio.NewWriter(elevatorFile)
 			writeElevatorStatusToJSON.Write(elevatorJSONcontent)
 			writeElevatorStatusToJSON.Flush()
 			
-		case a := <-updateExternalOrders: // New order, finished order // <-FIX!
+		case e := <-updateExternalOrders: // New order, finished order // <-FIX!
 			// Write to AllOrders.JSON file
 			allOrdersFile,_ := os.Create("AllOrders.JSON")
 			allOrdersJSONcontent,_ :=json.MarshalIndent(allOrders,"","\t")
@@ -164,13 +177,13 @@ var elevMap map[string]elevhandler.ElevatorStatus //map to store all the elevato
 
 // It will receive and keep track of all orders and use a cost function to decide which elevator should take which order.
 func OrderHandlerFSM(myID string,
-	newOrder <-chan elevio.ButtonEvent,
-	finishedOrder <-chan elevio.ButtonEvent, //brukes ikke
-	elev <-chan elevhandler.Elevator,
-	orderOut chan<- elevio.ButtonEvent,
-	allOrders chan<- elevhandler.Orders,
-	confirmationIn <-chan Confirmation, //brukes ikke
-	confirmationOut chan<- Confirmation) { //brukes ikke
+					 newOrder <-chan elevio.ButtonEvent,
+					 finishedOrder <-chan elevio.ButtonEvent, //brukes ikke
+					 elev <-chan elevhandler.Elevator,
+					 orderOut chan<- elevio.ButtonEvent,
+					 allOrders chan<- elevhandler.Orders,
+					 confirmationIn <-chan Confirmation, //brukes ikke
+					 confirmationOut chan<- Confirmation) { //brukes ikke
 	// Inputs:
 	// NewOrder ButtonEvent: This is a new order that should be handled.
 	// FinishedOrder ButtonEvent: This is a finished order that should be cleared.
@@ -217,10 +230,10 @@ func Wait() {
 // The elevator who got the order will send the specific order and an order confirmation as well.
 // Elevators that are not connected will not be taken into consideration.
 func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
-	ordersPt *HallOrders,
-	myID string,
-	order elevio.ButtonEvent,
-	orderOut chan<- elevio.ButtonEvent) {
+					ordersPt *HallOrders,
+					myID string,
+					order elevio.ButtonEvent,
+					orderOut chan<- elevio.ButtonEvent) {
 	//TODO: save to file
 	fmt.Println("Got order request")
 	minCost := 1000000000000000000 //Big number so that the first cost is lower, couldn't use math.Inf(1) because of different types. Fix this
@@ -275,7 +288,6 @@ func ConfirmOrder(ordersPt *HallOrders, id string, order elevio.ButtonEvent) {
 			elevio.SetButtonLamp(elevio.BT_HallDown, order.Floor, true) // evt set lights et annet sted
 		}
 	}
-
 }
 
 // When an order times out, this function will resend that order to the network module as a new order.
@@ -327,10 +339,8 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *Ha
 			} else {
 				fmt.Println("Several elevators have the same order")
 			}
-
 		}
 	}
-
 }
 
 /*

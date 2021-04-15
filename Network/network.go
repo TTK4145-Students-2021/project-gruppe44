@@ -17,12 +17,12 @@ import (
 func Network(id string,
 			 orderRx chan<- elevio.ButtonEvent,
 			 orderTx <-chan elevio.ButtonEvent,
-			 elevTx <-chan elevhandler.Elevator,
 			 elevRx chan<- elevhandler.Elevator,
-			 confTx <-chan Orderhandler.Confirmation,
+			 elevTx <-chan elevhandler.Elevator,
 			 confRx chan<- Orderhandler.Confirmation,
-			 finTx <-chan elevio.ButtonEvent,
-			 finRx chan<- elevio.ButtonEvent) {
+			 confTx <-chan Orderhandler.Confirmation,
+			 finRx chan<- elevio.ButtonEvent,
+			 finTx <-chan elevio.ButtonEvent){
 
 	//var id string
 
@@ -56,6 +56,5 @@ func Network(id string,
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 		}
-
 	}
 }

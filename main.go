@@ -28,25 +28,25 @@ import (
 		Elevator:
 			Refactoring (remove uneccesary while loops)
 			Emergency stop
-
+		FIX README files and similar stuff that we need/dont need
 */
 
 func main() {
 	numFloors := 4
 	//addr := "localhost:15657"
 
-	var addr string // choose addr by '-addr=my_address'
+	// choose addr by '-addr=my_address'
+	var addr string
 	flag.StringVar(&addr, "addr", "localhost:15657", "Address of elevator server")
 	flag.Parse()
 
 	// Our id can be anything. Here we pass it on the command line, using
-	//  `go run main.go -id=our_id`
+	// `go run main.go -id=our_id`
 	var id string
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
 	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
+	// (But since we can run multiple programs on the same PC, we also append the process ID)
 	if id == "" {
 		localIP, err := localip.LocalIP()
 		if err != nil {
@@ -56,16 +56,16 @@ func main() {
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	}
 
-	orderFromNet := make(chan elevio.ButtonEvent)
-	orderFromElev := make(chan elevio.ButtonEvent)
-	orderFromHandlr := make(chan elevio.ButtonEvent)
-	orderLights := make(chan elevhandler.Orders)
-	finIn := make(chan elevio.ButtonEvent)
-	finOut := make(chan elevio.ButtonEvent)
-	confOut := make(chan Orderhandler.Confirmation)
-	confIn := make(chan Orderhandler.Confirmation)
-	elevFromFSM := make(chan elevhandler.Elevator)
-	elevFromNet := make(chan elevhandler.Elevator)
+	elevFromFSM		:= make(chan elevhandler.Elevator)
+	elevFromNet		:= make(chan elevhandler.Elevator)
+	orderLights		:= make(chan elevhandler.Orders)
+	finIn			:= make(chan elevio.ButtonEvent)
+	finOut			:= make(chan elevio.ButtonEvent)
+	orderFromElev	:= make(chan elevio.ButtonEvent)
+	orderFromHandler:= make(chan elevio.ButtonEvent)
+	orderFromNet	:= make(chan elevio.ButtonEvent)
+	confIn			:= make(chan Orderhandler.Confirmation)
+	confOut			:= make(chan Orderhandler.Confirmation)
 	/*
 		go func() { //temp for å tømme ubrukte channels
 			for {
@@ -77,7 +77,7 @@ func main() {
 		}()
 	*/
 
-	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, confOut, confIn, finOut, finIn)
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, elevFromNet, orderFromHandlr, orderLights, confIn, confOut)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandlr, orderFromElev, elevFromFSM, finOut)
+	go Network.Network(id, orderFromNet, orderFromElev, elevFromNet, elevFromFSM, confIn, confOut, finIn, finOut)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, elevFromNet, orderFromHandler, orderLights, confIn, confOut)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, finOut)
 }

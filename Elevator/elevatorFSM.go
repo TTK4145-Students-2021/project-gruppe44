@@ -11,12 +11,12 @@ import (
 )
 
 func ElevatorFSM(id string,
-	addr string,
-	numFloors int,
-	orderRecieved chan elevio.ButtonEvent,
-	orderOut chan<- elevio.ButtonEvent,
-	elevCH chan<- elevhandler.Elevator,
-	finishedOrder chan<- elevio.ButtonEvent) {
+				 addr string,
+				 numFloors int,
+				 orderRecieved chan elevio.ButtonEvent,
+				 orderOut chan<- elevio.ButtonEvent,
+				 elevCH chan<- elevhandler.Elevator,
+				 finishedOrder chan<- elevio.ButtonEvent) {
 
 	// "localhost:15657"
 	// numFloors := 4
@@ -156,10 +156,10 @@ func idle(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, orderCH <-chan
 }
 
 func moving(elevPt *elevhandler.ElevatorStatus,
-	stopCH <-chan bool,
-	floorCH <-chan int,
-	orderCH <-chan elevio.ButtonEvent,
-	direction elevio.MotorDirection) string {
+			stopCH <-chan bool,
+			floorCH <-chan int,
+			orderCH <-chan elevio.ButtonEvent,
+			direction elevio.MotorDirection) string {
 
 	elevio.SetMotorDirection(direction)
 	elevPt.Direction = direction

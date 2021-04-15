@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+<<<<<<< HEAD
 	"time"
 
 	/*
@@ -13,6 +14,14 @@ import (
 		"os"
 	*/
 
+=======
+/*
+	"bufio"
+	"encoding/json"
+	"io/ioutil"
+	"os"
+*/
+>>>>>>> 9d7daf0567423960277aa99e209f89ef6c03126c
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"
 )

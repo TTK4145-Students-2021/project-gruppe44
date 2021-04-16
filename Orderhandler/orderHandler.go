@@ -179,11 +179,6 @@ type Order struct {
 	TimeStarted time.Time //currently unused, but might be used for timeout flag
 }
 
-type Confirmation struct {
-	ID    string             //ID of elevator who confirmed order
-	Order elevio.ButtonEvent //The order to be confirmed
-}
-
 type HallOrders struct {
 	//Inside []Order /** < The inside panel orders*/ //we ignore inside orders as this is handled directly by the elevator
 	Up   []Order /** < The upwards orders from outside */
@@ -195,13 +190,10 @@ var elevMap map[string]elevhandler.ElevatorStatus //map to store all the elevato
 // It will receive and keep track of all orders and use a cost function to decide which elevator should take which order.
 func OrderHandlerFSM(myID string,
 					 newOrder <-chan elevio.ButtonEvent,
-					 finishedOrder <-chan elevio.ButtonEvent, //brukes ikke
 					 elev <-chan elevhandler.Elevator,
 					 orderOut chan<- elevio.ButtonEvent,
 					 orderResend chan<- elevio.ButtonEvent,
-					 allOrders chan<- elevhandler.Orders,
-					 confirmationIn <-chan Confirmation, //brukes ikke
-					 confirmationOut chan<- Confirmation) { //brukes ikke
+					 allOrders chan<- elevhandler.Orders) {
 	// Inputs:
 	// NewOrder ButtonEvent: This is a new order that should be handled.
 	// FinishedOrder ButtonEvent: This is a finished order that should be cleared.
@@ -220,12 +212,9 @@ func OrderHandlerFSM(myID string,
 	for {
 		select {
 		case o := <-newOrder:
-			ChooseElevator(elevMap, ordersPt, myID, o, orderOut) //, confirmationOut)
+			ChooseElevator(elevMap, ordersPt, myID, o, orderOut) 
 		case e := <-elev:
 			UpdateElevators(elevMap, ordersPt, e, orderResend)
-		case <-finishedOrder: // empty unused channels
-		case <-confirmationIn:
-		//	ConfirmOrder(ordersPt, conf.ID, conf.Order)
 		}
 	}
 }
@@ -284,7 +273,6 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	}
 	if chosenElev == myID {
 		orderOut <- order
-		//conf <- Confirmation{ID: myID, Order: order}
 		fmt.Println("Took the order")
 	} else {
 		fmt.Println("Didn't take order")

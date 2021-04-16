@@ -14,8 +14,7 @@ func ElevatorFSM(id string,
 				 numFloors int,
 				 orderRecieved chan elevio.ButtonEvent,
 				 orderOut chan<- elevio.ButtonEvent,
-				 elevCH chan<- elevhandler.Elevator,
-				 finishedOrder chan<- elevio.ButtonEvent) {
+				 elevCH chan<- elevhandler.Elevator) {
 
 	// "localhost:15657"
 	// numFloors := 4
@@ -103,10 +102,10 @@ func ElevatorFSM(id string,
 			state = moving(elevPt, drv_stop, drv_floors, orderRecieved, elevio.MD_Down)
 		case "stop_up_state":
 			fmt.Println("in stop up")
-			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, finishedOrder, elevio.MD_Up)
+			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, elevio.MD_Up)
 		case "stop_down_state":
 			fmt.Println("in stop down")
-			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, finishedOrder, elevio.MD_Down)
+			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, elevio.MD_Down)
 		case "emergency_stop_state":
 			fmt.Println("in stop")
 			state = emergency_stop()
@@ -196,7 +195,6 @@ func stop(elevPt *elevhandler.ElevatorStatus,
 		  drv_stop <-chan bool,
 		  drv_obstr <-chan bool,
 		  orderCH <-chan elevio.ButtonEvent,
-		  finishedOrder chan<- elevio.ButtonEvent,
 		  direction elevio.MotorDirection) string {
 
 	elevio.SetMotorDirection(elevio.MD_Stop)
@@ -221,7 +219,7 @@ func stop(elevPt *elevhandler.ElevatorStatus,
 				timer = time.NewTimer(3 * time.Second)
 			}
 		case <-timer.C:
-			elevhandler.ClearOrdersAtFloor(elevPt, finishedOrder) //Quickfix, clear orders after door, else order doesn't have time to confirm first when order on same floor. FIX
+			elevhandler.ClearOrdersAtFloor(elevPt) //Quickfix, clear orders after door, else order doesn't have time to confirm first when order on same floor. FIX
 			elevio.SetDoorOpenLamp(false)
 			if direction == elevio.MD_Up && elevPt.Endstation > elevPt.Floor {
 				return "moving_up_state"

@@ -60,13 +60,9 @@ func main() {
 	elevFromFSM		:= make(chan elevhandler.Elevator)
 	elevFromNet		:= make(chan elevhandler.Elevator)
 	orderLights		:= make(chan elevhandler.Orders)
-	finIn			:= make(chan elevio.ButtonEvent)
-	finOut			:= make(chan elevio.ButtonEvent)
 	orderFromElev	:= make(chan elevio.ButtonEvent)
 	orderFromHandler:= make(chan elevio.ButtonEvent)
 	orderFromNet	:= make(chan elevio.ButtonEvent)
-	confIn			:= make(chan Orderhandler.Confirmation)
-	confOut			:= make(chan Orderhandler.Confirmation)
 	
 	/*
 		go func() { //temp for å tømme ubrukte channels
@@ -79,7 +75,7 @@ func main() {
 		}()
 	*/
 
-	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, confOut, confIn, finOut, finIn)
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, finIn, elevFromNet, orderFromHandler, orderFromElev, orderLights, confIn, confOut)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, finOut)
+	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderFromElev, orderLights)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM)
 }

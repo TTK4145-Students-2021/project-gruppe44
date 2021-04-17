@@ -65,30 +65,15 @@ func SetEndstation(elevPt *ElevatorStatus) {
 	fmt.Println(elevPt.Endstation)
 }
 
-func ClearOrdersAtFloor(elevPt *ElevatorStatus, finishedOrder chan<- elevio.ButtonEvent) {
-	/*
-		elevPt.Orders.Inside[elevPt.Floor] = false
-		if elevPt.Endstation == elevPt.Floor {
-			elevPt.Orders.Up[elevPt.Floor] = false
-			elevPt.Orders.Down[elevPt.Floor] = false
-		} else if elevPt.Direction == elevio.MD_Up {
-			elevPt.Orders.Up[elevPt.Floor] = false
-		} else {
-			elevPt.Orders.Down[elevPt.Floor] = false
-		}
-	*/
-	if elevPt.Orders.Inside[elevPt.Floor] {
-		elevPt.Orders.Inside[elevPt.Floor] = false
-		elevio.SetButtonLamp(elevio.BT_Cab, elevPt.Floor, false) //FIX sett lys et annet sted evt
-		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_Cab}
-	}
-	if (elevPt.Orders.Up[elevPt.Floor]) && ((elevPt.Direction == elevio.MD_Up) || (elevPt.Endstation == elevPt.Floor)) {
+func ClearOrdersAtFloor(elevPt *ElevatorStatus) {
+	elevPt.Orders.Inside[elevPt.Floor] = false
+	elevio.SetButtonLamp(elevio.BT_Cab, elevPt.Floor, false) //FIX sett lys et annet sted evt
+	
+	if (elevPt.Direction == elevio.MD_Up) || (elevPt.Endstation == elevPt.Floor) {
 		elevPt.Orders.Up[elevPt.Floor] = false
-		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_HallUp}
 	}
-	if (elevPt.Orders.Down[elevPt.Floor]) && ((elevPt.Direction == elevio.MD_Down) || (elevPt.Endstation == elevPt.Floor)) {
+	if (elevPt.Direction == elevio.MD_Down) || (elevPt.Endstation == elevPt.Floor) {
 		elevPt.Orders.Down[elevPt.Floor] = false
-		finishedOrder <- elevio.ButtonEvent{Floor: elevPt.Floor, Button: elevio.BT_HallDown}
 	}
 	SetEndstation(elevPt)
 }

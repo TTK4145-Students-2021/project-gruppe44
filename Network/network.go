@@ -5,7 +5,6 @@ import (
 
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"
-	"../Orderhandler"
 	"./bcast"
 	"./peers"
 )
@@ -18,11 +17,7 @@ func Network(id string,
 			 orderRx chan<- elevio.ButtonEvent,
 			 orderTx <-chan elevio.ButtonEvent,
 			 elevTx <-chan elevhandler.Elevator,
-			 elevRx chan<- elevhandler.Elevator,
-			 confTx <-chan Orderhandler.Confirmation,
-			 confRx chan<- Orderhandler.Confirmation,
-			 finTx <-chan elevio.ButtonEvent,
-			 finRx chan<- elevio.ButtonEvent) {
+			 elevRx chan<- elevhandler.Elevator) {
 	
 	//var id string
 
@@ -40,12 +35,6 @@ func Network(id string,
 
 	go bcast.Transmitter(33334, elevTx)
 	go bcast.Receiver(33334, elevRx)
-
-	go bcast.Transmitter(33335, finTx)
-	go bcast.Receiver(33335, finRx)
-
-	go bcast.Transmitter(33336, confTx)
-	go bcast.Receiver(33336, confRx)
 
 	fmt.Println("Started")
 	for {

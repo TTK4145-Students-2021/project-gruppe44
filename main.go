@@ -29,6 +29,23 @@ import (
 			Refactoring (remove uneccesary while loops)
 			Emergency stop
 		FIX README files and similar stuff that we need/dont need
+	
+	Suggestion:
+		Go through code and try to minimize the amount of times pointers are used/modified, i.e.:
+		(some of these might be necessary)
+			elevhandler.AddOrder
+			elevhandler.SetEndstation
+			elevhandler.ClearOrdersAtFloor
+			elevhandler.OrderTimeoutFlag
+			elevinit.InitializeElevator
+			Elevator.idle
+			Elevator.moving
+			Elevator.stop
+			Orderhandler.ChooseElevator
+			Orderhandler.ConfirmOrder
+			Orderhandler.ResendOrder
+			Orderhandler.UpdateElevators
+			Orderhandler.ClearOrder
 */
 
 func main() {

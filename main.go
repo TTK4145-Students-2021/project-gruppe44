@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"../elevio"
 	"./Elevator"
 	"./Elevator/elevhandler"
 	"./Elevator/elevio"
@@ -64,19 +65,21 @@ func main() {
 	orderFromHandler:= make(chan elevio.ButtonEvent)
 	orderFromNet	:= make(chan elevio.ButtonEvent)
 	discon 			:= make(chan []string)
+	orderResend 	:= make(chan elevio.ButtonEvent)
 	
-	/*
-		go func() { //temp for å tømme ubrukte channels
-			for {
-				select {
-				case c := <-confOut:
-					confIn <- c
-				}
+	
+	go func() { //temp for å tømme ubrukte channels
+		for {
+			select {
+			case o := <-orderResend:
+				orderRemove <- o
+				orderFromElev <- o
 			}
-		}()
-	*/
+		}
+	}()
+	
 
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderFromElev, orderLights, discon)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, orderLights, discon)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove)
 }

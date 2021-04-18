@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"../elevio"
 	"./Elevator"
 	"./Elevator/elevhandler"
 	"./Elevator/elevio"
@@ -66,7 +65,7 @@ func main() {
 	orderFromNet	:= make(chan elevio.ButtonEvent)
 	discon 			:= make(chan []string)
 	orderResend 	:= make(chan elevio.ButtonEvent)
-	
+	orderRemove 	:= make(chan elevio.ButtonEvent)
 	
 	go func() { //temp for å tømme ubrukte channels
 		for {

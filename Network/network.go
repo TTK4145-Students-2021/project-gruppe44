@@ -17,7 +17,8 @@ func Network(id string,
 			 orderRx chan<- elevio.ButtonEvent,
 			 orderTx <-chan elevio.ButtonEvent,
 			 elevTx <-chan elevhandler.Elevator,
-			 elevRx chan<- elevhandler.Elevator) {
+			 elevRx chan<- elevhandler.Elevator,
+			 disconCH chan<- []string) {
 	
 	//var id string
 
@@ -44,6 +45,7 @@ func Network(id string,
 			fmt.Printf("  Peers:    %q\n", p.Peers)
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
+			disconCH <- p.Lost
 		}
 	}
 }

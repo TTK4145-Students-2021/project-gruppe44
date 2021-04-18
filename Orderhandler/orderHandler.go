@@ -1,14 +1,14 @@
 package Orderhandler
 
 import (
-	"fmt"
-	"math"
-	"sort"
-	"time"
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
+	"sort"
+	"time"
 
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"
@@ -193,7 +193,8 @@ func OrderHandlerFSM(myID string,
 					 elev <-chan elevhandler.Elevator,
 					 orderOut chan<- elevio.ButtonEvent,
 					 orderResend chan<- elevio.ButtonEvent,
-					 allOrders chan<- elevhandler.Orders) {
+					 allOrders chan<- elevhandler.Orders, //unused FIX
+					 disconCH <-chan []string) {
 	// Inputs:
 	// NewOrder ButtonEvent: This is a new order that should be handled.
 	// FinishedOrder ButtonEvent: This is a finished order that should be cleared.
@@ -215,6 +216,8 @@ func OrderHandlerFSM(myID string,
 			ChooseElevator(elevMap, ordersPt, myID, o, orderOut) 
 		case e := <-elev:
 			UpdateElevators(elevMap, ordersPt, e, orderResend)
+		case d := <-disconCH:
+			OnDisconnect(elevMap, ordersPt, d, orderResend)
 		}
 	}
 }
@@ -228,6 +231,30 @@ func Init() {
 // The state machine for the orderHandler,
 // waiting for every other function to do their thing before giving order list to the Network module.
 func Wait() {
+
+}
+
+func OnDisconnect(elevMap map[string]elevhandler.ElevatorStatus,
+				  ordersPt *HallOrders,
+				  disconnected []string,
+				  orderResend chan<- elevio.ButtonEvent) {
+
+	for i :=0; i < len(disconnected); i++{
+		elev := elevMap[disconnected[i]]
+		elev.IsConnected = false
+		elevMap[disconnected[i]] = elev
+		for f := 0; f < len(ordersPt.Down); f++ {
+			if disconnected[i] == ordersPt.Down[f].ID {
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
+				ResendOrder(ordersPt, o, orderResend)
+			}
+			if disconnected[i] == ordersPt.Up[f].ID {
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallUp}
+				ResendOrder(ordersPt, o, orderResend)
+			}
+		}
+		
+	}					
 
 }
 
@@ -301,8 +328,7 @@ func ConfirmOrder(ordersPt *HallOrders, id string, order elevio.ButtonEvent) {
 
 // When an order times out, this function will resend that order to the network module as a new order.
 func ResendOrder(ordersPt *HallOrders, order elevio.ButtonEvent, orderResend chan<- elevio.ButtonEvent) {
-	//TODO: Clear old order
-	ClearOrder(ordersPt, order)
+	ClearOrder(ordersPt, order) //does it need to clear? FIX
 	orderResend<-order
 	fmt.Println("Resendt order")
 }
@@ -337,7 +363,8 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 		case (elev.ID != ordersPt.Down[f].ID) && elev.Status.Orders.Down[f]: //order taken, but not in list
 			if ordersPt.Down[f].ID == "" {
 				fmt.Println("Order taken without me knowing")
-				ordersPt.Down[f].ID = elev.ID	//assign order maybe confirm order aswell? FIX
+				ordersPt.Down[f].ID = elev.ID	//assign order maybe not confirm order aswell? FIX
+				ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallDown, Floor: f})
 			} else {
 				fmt.Println("Several elevators have the same order")
 				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
@@ -362,7 +389,8 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 		case (elev.ID != ordersPt.Up[f].ID) && elev.Status.Orders.Up[f]: //order taken, but not in list
 			if ordersPt.Up[f].ID == "" {
 				fmt.Println("Order taken without me knowing")
-				ordersPt.Up[f].ID = elev.ID	//assign order maybe confirm order aswell? FIX
+				ordersPt.Up[f].ID = elev.ID	//assign order maybe not confirm order aswell? FIX
+				ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
 			} else {
 				fmt.Println("Several elevators have the same order")
 				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallUp}

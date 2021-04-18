@@ -15,6 +15,7 @@ import (
 
 /*
 	TODO:
+		remove magic numbers like NumFloors in struct inits
 		Network:
 	
 		OrderHandler:

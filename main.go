@@ -16,15 +16,11 @@ import (
 /*
 	TODO:
 		Network:
-			Send disconnected flag to orderhandler
+	
 		OrderHandler:
 			Filehandling: Integrate in rest of code
-			What happens on disconnect?
-			What happens on reconnect? SyncElevators()
 			Send orderlights to elevatorFSM
 			Init()
-			ResendOrder()
-			UpdateElevators <- add confirmation check, and finished check here (instead of sending them)
 		Elevator:
 			Refactoring (remove uneccesary while loops)
 			Emergency stop

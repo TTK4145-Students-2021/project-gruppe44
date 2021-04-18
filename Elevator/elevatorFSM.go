@@ -180,12 +180,12 @@ func moving(elevPt *elevhandler.ElevatorStatus,
 			switch direction {
 			case elevio.MD_Up:
 				//fmt.Println("Up order check, floor: ", f)
-				if elevPt.Orders.Up[f] || elevPt.Orders.Inside[f] || elevPt.Endstation == f {
+				if elevPt.Orders.Up[f] || elevPt.Orders.Inside[f] || elevPt.Endstation <= f {
 					return "stop_up_state"
 				}
 			case elevio.MD_Down:
 				//fmt.Println("Down order check, floor: ", elevPt.Floor)
-				if elevPt.Orders.Down[f] || elevPt.Orders.Inside[f] || elevPt.Endstation == f {
+				if elevPt.Orders.Down[f] || elevPt.Orders.Inside[f] || elevPt.Endstation >= f {
 					return "stop_down_state"
 				}
 			}

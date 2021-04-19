@@ -55,6 +55,7 @@ func RemoveOrder(elevPt *ElevatorStatus, order elevio.ButtonEvent){
 	case elevio.BT_HallDown:
 		elevPt.Orders.Down[order.Floor] = false
 	}
+	SetEndstation(elevPt)
 }
 
 //ElevatorGetEndstation returns endstation

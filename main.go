@@ -20,7 +20,7 @@ import (
 	
 		OrderHandler:
 			Filehandling: Integrate in rest of code
-			Send orderlights to elevatorFSM
+			Fix what to do with order lights
 			Init()
 		Elevator:
 			Refactoring (remove uneccesary while loops)
@@ -35,7 +35,6 @@ func main() {
 	// choose addr by '-addr=my_address'
 	var addr string
 	flag.StringVar(&addr, "addr", "localhost:15657", "Address of elevator server")
-	flag.Parse()
 
 	// Our id can be anything. Here we pass it on the command line, using
 	// `go run main.go -id=our_id`

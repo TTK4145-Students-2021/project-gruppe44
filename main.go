@@ -11,6 +11,7 @@ import (
 	"./Network"
 	"./Network/localip"
 	"./Orderhandler"
+	"./reboot"
 )
 
 /*
@@ -35,8 +36,6 @@ func main() {
 	// choose addr by '-addr=my_address'
 	var addr string
 	flag.StringVar(&addr, "addr", "localhost:15657", "Address of elevator server")
-	flag.Parse()
-
 	// Our id can be anything. Here we pass it on the command line, using
 	// `go run main.go -id=our_id`
 	var id string
@@ -53,6 +52,7 @@ func main() {
 		}
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	}
+	reboot.Reboot(addr, id)
 
 	elevFromFSM		:= make(chan elevhandler.Elevator)
 	elevFromNet		:= make(chan elevhandler.Elevator)

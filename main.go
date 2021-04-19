@@ -15,16 +15,13 @@ import (
 
 /*
 	TODO:
+		remove magic numbers like NumFloors in struct inits
 		Network:
-			Send disconnected flag to orderhandler
+	
 		OrderHandler:
 			Filehandling: Integrate in rest of code
-			What happens on disconnect?
-			What happens on reconnect? SyncElevators()
 			Send orderlights to elevatorFSM
 			Init()
-			ResendOrder()
-			UpdateElevators <- add confirmation check, and finished check here (instead of sending them)
 		Elevator:
 			Refactoring (remove uneccesary while loops)
 			Emergency stop
@@ -80,19 +77,22 @@ func main() {
 	orderFromElev	:= make(chan elevio.ButtonEvent)
 	orderFromHandler:= make(chan elevio.ButtonEvent)
 	orderFromNet	:= make(chan elevio.ButtonEvent)
+	discon 			:= make(chan []string)
+	orderResend 	:= make(chan elevio.ButtonEvent)
+	orderRemove 	:= make(chan elevio.ButtonEvent)
 	
-	/*
-		go func() { //temp for å tømme ubrukte channels
-			for {
-				select {
-				case c := <-confOut:
-					confIn <- c
-				}
+	go func() { //temp for å tømme ubrukte channels
+		for {
+			select {
+			case o := <-orderResend:
+				orderRemove <- o
+				orderFromElev <- o
 			}
-		}()
-	*/
+		}
+	}()
+	
 
-	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet)
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderFromElev, orderLights)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM)
+	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, orderLights, discon)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove)
 }

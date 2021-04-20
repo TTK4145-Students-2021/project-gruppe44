@@ -67,13 +67,9 @@ func main() {
 	orderFromHandler:= make(chan elevio.ButtonEvent)
 	orderFromNet	:= make(chan elevio.ButtonEvent)
 	orderRemove 	:= make(chan elevio.ButtonEvent)
-<<<<<<< HEAD
 	timeOutToElev := make(chan bool)
-	// timeout			:= make(chan bool)
-=======
 	orderResend 	:= make(chan elevio.ButtonEvent)
 	discon 			:= make(chan []string)
->>>>>>> 918b2257b70ba4d6e3d7aa9e3d2e1fe81fa7d587
 
 	go func() { //temp for å tømme ubrukte channels
 		for {
@@ -84,16 +80,8 @@ func main() {
 			}
 		}
 	}()
-<<<<<<< HEAD
-	// Happens only at boot
 
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon, timeOutToElev) //timeout)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon, timeOutToElev)
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, elevInit, timeOutToElev) //timeout)
-=======
-
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon)
-	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, elevInit, orderResend)
->>>>>>> 918b2257b70ba4d6e3d7aa9e3d2e1fe81fa7d587
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, elevInit, timeOutToElev)
 }

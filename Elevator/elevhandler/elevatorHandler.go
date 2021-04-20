@@ -2,7 +2,6 @@ package elevhandler
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"../elevio"

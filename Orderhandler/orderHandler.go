@@ -7,12 +7,14 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+
 	// "reflect"
 	"sort"
 	"time"
 
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"
+	"../elevio"
 	// "../elevio"
 )
 
@@ -131,6 +133,26 @@ func OrderTimeoutFlag(myID string,
 	}
 }
 
+
+func timeoutCheck(ordersPt *AllOrders, timeout chan<- elevio.ButtonEvent){
+	timeLimit := 20 * time.Second
+	for{
+		time.Sleep(time.Second) //FIX random number
+		for f := 0; f < len(ordersPt.Down); f++{
+			if time.Now().After(ordersPt.Down[f].TimeStarted.Add(timeLimit)){
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
+				timeout <- o
+			}
+			if time.Now().After(ordersPt.Up[f].TimeStarted.Add(timeLimit)){
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallUp}
+				timeout <- o
+			}
+		}
+		
+	}
+
+}
+
 // FIX - good inputs
 // the reest must be impemented a well
 func OnTimeout(elevMap map[string]elevhandler.ElevatorStatus,
@@ -223,7 +245,7 @@ func FileHandler(hall AllOrders, elev elevhandler.ElevatorStatus){
 type Order struct {
 	ID        string //ID of elevator who has the order, empty string if no elevator
 	Confirmed bool   //true if confirmed, false if else
-	TimeStarted time.Time //currently unused, but might be used for timeout flag
+	TimeStarted time.Time //currently used, but might be used for timeout flag
 }
 
 type AllOrders struct {
@@ -265,9 +287,14 @@ func OrderHandlerFSM(myID string,
 	// elevCH := make(chan elevhandler.ElevatorStatus)
 	Init(myID, ordersPt, elevInit)
 	//go updateOrderLights(ordersPt) FIX
+	orderTimedOut := make(chan elevio.ButtonEvent)
+	go timeoutCheck(ordersPt,orderTimedOut) 
 	for {
 		// ordersTemp := *ordersPt
 		select {
+		case t := <-orderTimedOut:
+			fmt.Println(t)
+			//OnTimeout(t) FIX on timeout
 		case o := <-newOrder:
 			ChooseElevator(elevMap, ordersPt, myID, o, orderOut)
 		case e := <-elev:

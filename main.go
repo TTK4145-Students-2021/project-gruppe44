@@ -18,6 +18,7 @@ import (
 	TODO:
 		remove magic numbers like NumFloors in struct inits
 		Network:
+
 	
 		OrderHandler:
 			Filehandling:
@@ -31,6 +32,8 @@ import (
 			- Integrate with rest of code
 			Send orderlights to elevatorFSM
 			Init() - Removed
+			Fic ligths
+			AllOrders or HallOrders
 		Elevator:
 			Refactoring (remove uneccesary while loops)
 			Emergency stop

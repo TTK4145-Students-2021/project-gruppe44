@@ -3,7 +3,6 @@ package elevinit
 import (
 	"fmt"
 
-	// "../Elevator/elevhandler"
 	"../elevhandler"
 	"../elevio"
 )

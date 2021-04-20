@@ -17,7 +17,7 @@ func ElevatorFSM(id string,
 				 elevCH chan<- elevhandler.Elevator,
 				 orderRemove <-chan elevio.ButtonEvent,
 				 elevInit <-chan elevhandler.ElevatorStatus){
-				//  timeout <-chan bool) { // uimplementert
+				//  orderResend <-chan elevio.ButtonEvent) { // uimplementert
 
 	// "localhost:15657"
 	// numFloors := 4
@@ -89,8 +89,10 @@ func ElevatorFSM(id string,
 			}
 		*/
 	}()
+
 	state := "idle_state"
 	fmt.Println(*elevPt)
+	
 	for {
 		//time.Sleep(50 * time.Millisecond)
 		switch state {
@@ -255,14 +257,7 @@ func emergency_stop() string {
 // FIX - do more...
 // Reset all orders
 func timeout(elevPt *elevhandler.ElevatorStatus, timeout <-chan bool) string {
-
-	for{
-		select{
-		case t := <-timeout:
-			elevPt.Timeout = t
-			return "timeout"
-		}
-	}
+	return "timeout" // FIX
 }
 
 func updateOrderLights(orders <-chan elevhandler.Orders) { // usikker på om denne skal være her FIX

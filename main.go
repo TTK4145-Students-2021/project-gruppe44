@@ -16,29 +16,23 @@ import (
 
 /*
 	TODO:
-		remove magic numbers like NumFloors in struct inits
-		Network:
-
-	
+		Remove magic numbers like NumFloors in struct inits
+		Remove unnessecary comments in main and other files
 		OrderHandler:
 			Filehandling:
-			- Integrate in rest of code (mainly updateOrder)
-			- FIX bug where simulation doesnt update
 			- Must receive networkdisconnet from somewhere
-			OrderTimeoutFlag:
-			- Integrate in rest of code (uncertain where it should be called)
-			- Find good inputs
 			OnTimeout:
 			- Integrate with rest of code
 			Send orderlights to elevatorFSM
-			Init() - Removed
-			Fic ligths
-			AllOrders or HallOrders
+			Init:
+			- Add check to see if file is empty
+			FIX lights
 		Elevator:
 			Refactoring (remove uneccesary while loops)
 			Emergency stop
 		FIX README files and similar stuff that we need/dont need
-	
+
+		TIPS: ctrl+f: type in FIX
 */
 
 func main() {
@@ -72,11 +66,9 @@ func main() {
 	orderFromElev	:= make(chan elevio.ButtonEvent)
 	orderFromHandler:= make(chan elevio.ButtonEvent)
 	orderFromNet	:= make(chan elevio.ButtonEvent)
-	discon 			:= make(chan []string)
-	orderResend 	:= make(chan elevio.ButtonEvent)
 	orderRemove 	:= make(chan elevio.ButtonEvent)
-	startup			:= make(chan bool, 1)
-	// timeout			:= make(chan bool)
+	orderResend 	:= make(chan elevio.ButtonEvent)
+	discon 			:= make(chan []string)
 
 	go func() { //temp for å tømme ubrukte channels
 		for {
@@ -87,10 +79,8 @@ func main() {
 			}
 		}
 	}()
-	// Happens only at boot
-	startup <- true
 
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon, startup) //timeout)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon)
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, elevInit) //timeout)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, elevInit, orderResend)
 }

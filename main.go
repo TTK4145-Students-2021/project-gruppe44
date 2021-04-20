@@ -87,7 +87,7 @@ func main() {
 	// Happens only at boot
 	startup <- true
 
-	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
 	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, orderLights, discon, startup) //timeout)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove) //timeout)
+	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, orderLights) //timeout)
 }

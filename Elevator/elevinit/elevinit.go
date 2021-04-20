@@ -2,6 +2,7 @@ package elevinit
 
 import (
 	"fmt"
+	"time"
 
 	// "../Elevator/elevhandler"
 	"../elevhandler"
@@ -52,10 +53,13 @@ func InitializeElevator(addr string,
 	select {
 	case f := <-floorCH:
 		elevPt.Floor = f
-		//elevPt.Endstation = f
-		elevhandler.SetEndstation(elevPt)
 		elevio.SetFloorIndicator(f)
 	}
+	elevhandler.SetEndstation(elevPt)
+	elevPt.Available = true
+	elevPt.TimeSinceClearedOrder = time.Now()
+	//elevPt.Timeout = false
+	//elevPt.IsConnected = true
 	fmt.Println(*elevPt)
 
 	elevio.SetMotorDirection(elevio.MD_Stop)

@@ -16,7 +16,8 @@ func ElevatorFSM(id string,
 				 orderOut chan<- elevio.ButtonEvent,
 				 elevCH chan<- elevhandler.Elevator,
 				 orderRemove <-chan elevio.ButtonEvent,
-				 elevInit <-chan elevhandler.ElevatorStatus){
+				 elevInit <-chan elevhandler.ElevatorStatus,
+				 timeOutToElev <-chan bool){
 				//  timeout <-chan bool) { // uimplementert
 
 	// "localhost:15657"
@@ -41,7 +42,7 @@ func ElevatorFSM(id string,
 	myElevator := elevhandler.ElevatorStatus{Endstation: 0,
 											 Orders:	 myOrders,
 											 Floor:		 0,
-											 IsConnected:true,
+											 Available:true,
 											 Direction:	 elevio.MD_Stop}
 	elevPt := &myElevator
 
@@ -96,19 +97,19 @@ func ElevatorFSM(id string,
 		switch state {
 		case "idle_state":
 			fmt.Println("in idle")
-			state = idle(elevPt, drv_stop, orderRecieved, orderRemove)
+			state = idle(elevPt, drv_stop, orderRecieved, orderRemove, timeOutToElev)
 		case "moving_up_state":
 			fmt.Println("in moving up")
-			state = moving(elevPt, drv_stop, drv_floors, orderRecieved, elevio.MD_Up, orderRemove)
+			state = moving(elevPt, drv_stop, drv_floors, orderRecieved, elevio.MD_Up, orderRemove, timeOutToElev)
 		case "moving_down_state":
 			fmt.Println("in moving down")
-			state = moving(elevPt, drv_stop, drv_floors, orderRecieved, elevio.MD_Down, orderRemove)
+			state = moving(elevPt, drv_stop, drv_floors, orderRecieved, elevio.MD_Down, orderRemove, timeOutToElev)
 		case "stop_up_state":
 			fmt.Println("in stop up")
-			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, elevio.MD_Up, orderRemove)
+			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, elevio.MD_Up, orderRemove, timeOutToElev)
 		case "stop_down_state":
 			fmt.Println("in stop down")
-			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, elevio.MD_Down, orderRemove)
+			state = stop(elevPt, drv_stop, drv_obstr, orderRecieved, elevio.MD_Down, orderRemove, timeOutToElev)
 		case "emergency_stop_state":
 			fmt.Println("in stop")
 			state = emergency_stop()
@@ -116,12 +117,12 @@ func ElevatorFSM(id string,
 		// 	fmt.Println("timeout") 
 		// 	state = timeout(elevPt, timeout) // FIX
 		default:
-			state = idle(elevPt, drv_stop, orderRecieved, orderRemove)
+			state = idle(elevPt, drv_stop, orderRecieved, orderRemove, timeOutToElev)
 		}
 	}
 }
 
-func idle(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, orderCH <-chan elevio.ButtonEvent, orderRemove <-chan elevio.ButtonEvent) string {
+func idle(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, orderCH <-chan elevio.ButtonEvent, orderRemove <-chan elevio.ButtonEvent, timeOutToElev <-chan bool) string {
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevPt.Direction = elevio.MD_Stop
 	switch { // in case of already order
@@ -139,6 +140,8 @@ func idle(elevPt *elevhandler.ElevatorStatus, stopCH <-chan bool, orderCH <-chan
 
 	for {
 		select {
+		case t := <- timeOutToElev:
+			elevPt.Available = t
 		case s := <-stopCH:
 			if s == true {
 				return "emergency_stop_state"
@@ -168,13 +171,16 @@ func moving(elevPt *elevhandler.ElevatorStatus,
 			floorCH <-chan int,
 			orderCH <-chan elevio.ButtonEvent,
 			direction elevio.MotorDirection,
-			orderRemove <-chan elevio.ButtonEvent) string {
+			orderRemove <-chan elevio.ButtonEvent,
+			timeOutToElev <-chan bool) string {
 
 	elevio.SetMotorDirection(direction)
 	elevPt.Direction = direction
 
 	for {
 		select {
+		case t := <- timeOutToElev:
+			elevPt.Available = t
 		case s := <-stopCH:
 			if s == true {
 				return "emergency_stop_state"
@@ -207,7 +213,8 @@ func stop(elevPt *elevhandler.ElevatorStatus,
 		  drv_obstr <-chan bool,
 		  orderCH <-chan elevio.ButtonEvent,
 		  direction elevio.MotorDirection,
-		  orderRemove <-chan elevio.ButtonEvent) string {
+		  orderRemove <-chan elevio.ButtonEvent,
+		  timeOutToElev <-chan bool) string {
 
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetDoorOpenLamp(true)
@@ -219,6 +226,8 @@ func stop(elevPt *elevhandler.ElevatorStatus,
 
 	for {
 		select {
+		case t := <- timeOutToElev:
+			elevPt.Available = t
 		case s := <-drv_stop:
 			if s == true {
 				timer.Stop()
@@ -232,6 +241,7 @@ func stop(elevPt *elevhandler.ElevatorStatus,
 			}
 		case <-timer.C:
 			elevhandler.ClearOrdersAtFloor(elevPt) //Quickfix, clear orders after door, else order doesn't have time to confirm first when order on same floor. FIX
+			elevPt.Available = true
 			elevio.SetDoorOpenLamp(false)
 			if direction == elevio.MD_Up && elevPt.Endstation > elevPt.Floor {
 				return "moving_up_state"
@@ -259,7 +269,7 @@ func timeout(elevPt *elevhandler.ElevatorStatus, timeout <-chan bool) string {
 	for{
 		select{
 		case t := <-timeout:
-			elevPt.Timeout = t
+			elevPt.Available = t
 			return "timeout"
 		}
 	}

@@ -14,8 +14,6 @@ import (
 
 	"../Elevator/elevhandler"
 	"../Elevator/elevio"
-	"../elevio"
-	// "../elevio"
 )
 
 // We assume that the person waits for the assigned elevator
@@ -134,21 +132,44 @@ func OrderTimeoutFlag(myID string,
 }
 
 
-func timeoutCheck(ordersPt *AllOrders, timeout chan<- elevio.ButtonEvent){
+func timeoutCheck(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *AllOrders, timeout chan<- string){
 	timeLimit := 20 * time.Second
+
+
+
 	for{
 		time.Sleep(time.Second) //FIX random number
 		for f := 0; f < len(ordersPt.Down); f++{
-			if time.Now().After(ordersPt.Down[f].TimeStarted.Add(timeLimit)){
-				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
-				timeout <- o
+			if (ordersPt.Down[f].ID != "") && time.Now().After(ordersPt.Down[f].TimeStarted.Add(timeLimit)){
+				if elev, ok := elevMap[ordersPt.Down[f].ID]; ok{
+					if time.Now().After(elev.TimeSinceClearedOrder.Add(timeLimit)){
+						timeout <- ordersPt.Down[f].ID
+					}
+				} else{
+					timeout <- ordersPt.Down[f].ID
+				}
 			}
-			if time.Now().After(ordersPt.Up[f].TimeStarted.Add(timeLimit)){
-				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallUp}
-				timeout <- o
+			if (ordersPt.Up[f].ID != "") && time.Now().After(ordersPt.Up[f].TimeStarted.Add(timeLimit)){
+				if elev, ok := elevMap[ordersPt.Up[f].ID]; ok{
+					if time.Now().After(elev.TimeSinceClearedOrder.Add(timeLimit)){
+						timeout <- ordersPt.Up[f].ID
+					}
+				} else{
+					timeout <- ordersPt.Up[f].ID
+				}
 			}
+
+
+
+			/*
+			if (ordersPt.Down[f].ID != "") && time.Now().After(ordersPt.Down[f].TimeStarted.Add(timeLimit)){
+				timeout <- ordersPt.Down[f].ID
+			}
+			if (ordersPt.Up[f].ID != "") && time.Now().After(ordersPt.Up[f].TimeStarted.Add(timeLimit)){
+				timeout <- ordersPt.Up[f].ID
+			}
+			*/
 		}
-		
 	}
 
 }
@@ -157,9 +178,19 @@ func timeoutCheck(ordersPt *AllOrders, timeout chan<- elevio.ButtonEvent){
 // the reest must be impemented a well
 func OnTimeout(elevMap map[string]elevhandler.ElevatorStatus,
 			   ordersPt *AllOrders,
-			   disconnected []string,
+			   myID string,
+			   timedOut string,
+			   timeoutElev chan<- bool,
 			   orderResend chan<- elevio.ButtonEvent) {
+	fmt.Println("in timeout")
+	if timedOut == myID{
+		timeoutElev <- false
+	}
+	OnDisconnect(elevMap, ordersPt, []string{timedOut}, orderResend)
 
+	
+
+	/*
 	for i :=0; i < len(disconnected); i++{
 		elev := elevMap[disconnected[i]]
 		elev.IsConnected = false
@@ -174,7 +205,8 @@ func OnTimeout(elevMap map[string]elevhandler.ElevatorStatus,
 				ResendOrder(ordersPt, o, orderResend)
 			}
 		}
-	}					
+	}
+	*/					
 }
 
 // FIX BUG where simulation doesn't update
@@ -264,7 +296,7 @@ func OrderHandlerFSM(myID string,
 					 orderResend chan<- elevio.ButtonEvent,
 					 elevInit chan<- elevhandler.ElevatorStatus,
 					 disconCH <-chan []string,
-					 elevatorAfterStartup <-chan bool){
+					 timeOutToElev chan<- bool){
 					//  timeout chan<- bool){ // Filehandler
 	// Inputs:
 	// NewOrder ButtonEvent: This is a new order that should be handled.
@@ -287,18 +319,17 @@ func OrderHandlerFSM(myID string,
 	// elevCH := make(chan elevhandler.ElevatorStatus)
 	Init(myID, ordersPt, elevInit)
 	//go updateOrderLights(ordersPt) FIX
-	orderTimedOut := make(chan elevio.ButtonEvent)
-	go timeoutCheck(ordersPt,orderTimedOut) 
+	elevTimedOut := make(chan string)
+	go timeoutCheck(elevMap, ordersPt, elevTimedOut) 
 	for {
 		// ordersTemp := *ordersPt
 		select {
-		case t := <-orderTimedOut:
-			fmt.Println(t)
-			//OnTimeout(t) FIX on timeout
+		case t := <-elevTimedOut:
+			OnTimeout(elevMap, ordersPt, myID, t, timeOutToElev, orderResend)
 		case o := <-newOrder:
 			ChooseElevator(elevMap, ordersPt, myID, o, orderOut)
 		case e := <-elev:
-			UpdateElevators(elevMap, ordersPt, e, orderResend, elevatorAfterStartup)
+			UpdateElevators(elevMap, ordersPt, e, orderResend)
 			
 			// go OrderTimeoutFlag(elevCH, AllOrders, order)
 		case d := <-disconCH:
@@ -326,6 +357,15 @@ func Init(myID string, ordersPt *AllOrders, elevCH chan<- elevhandler.ElevatorSt
 	json.Unmarshal(allOrdersContent, ordersPt)
 	elevStatusContent,_ := ioutil.ReadFile("Orderhandler/ElevatorStatus.JSON")
 	json.Unmarshal(elevStatusContent, elevPt)
+	if elevPt.Orders.Inside == nil{ //FIX
+		elevPt.Orders.Inside = []bool{false, false, false, false}
+	} 
+	if elevPt.Orders.Down == nil{
+		elevPt.Orders.Down = []bool{false, false, false, false}
+	}
+	if elevPt.Orders.Up == nil{
+		elevPt.Orders.Down = []bool{false, false, false, false}
+	}
 	elevCH <- elevTemp
 
 
@@ -367,7 +407,7 @@ func OnDisconnect(elevMap map[string]elevhandler.ElevatorStatus,
 
 	for i :=0; i < len(disconnected); i++{
 		elev := elevMap[disconnected[i]]
-		elev.IsConnected = false
+		elev.Available = false
 		elevMap[disconnected[i]] = elev
 		for f := 0; f < len(ordersPt.Down); f++ {
 			if disconnected[i] == ordersPt.Down[f].ID {
@@ -396,7 +436,9 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	//TODO: save to file
 	fmt.Println("Got order request")
 	minCost := 1000000000000000000 //Big number so that the first cost is lower, couldn't use math.Inf(1) because of different types. Fix this
+	
 	var chosenElev string
+	//chosenElev := "NO ELEVATOR"
 	//sorted ids to make sure every elevator chooses the same elev when cost is the same.
 	ids := make([]string, 0, len(elevMap))
 	for id := range elevMap {
@@ -408,7 +450,7 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 		id := ids[i]
 		elevStatus := elevMap[ids[i]]
 		cost := CostFunction(order, elevStatus)
-		if (cost < minCost) && elevStatus.IsConnected {
+		if (cost < minCost) && elevStatus.Available{
 			minCost = cost
 			chosenElev = id
 		}
@@ -465,8 +507,7 @@ func ResendOrder(ordersPt *AllOrders, order elevio.ButtonEvent, orderResend chan
 func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 					 ordersPt *AllOrders,
 					 elev elevhandler.Elevator,
-					 orderResend chan<- elevio.ButtonEvent,
-					 elevatorAfterStartup <-chan bool) {	// De nederste kanalene er for Filehandleren 
+					 orderResend chan<- elevio.ButtonEvent) {	// De nederste kanalene er for Filehandleren 
 	//TODO: save map to file
 	//TODO: check if the elevator has order not in list, if yes add order.
 	elevMap[elev.ID] = elev.Status

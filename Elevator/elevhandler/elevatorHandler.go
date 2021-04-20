@@ -3,6 +3,8 @@ package elevhandler
 import (
 	"fmt"
 	"math"
+	"time"
+
 	// "time"
 
 	//"../../Orderhandler" //fikk error import cycle not allowed.
@@ -19,12 +21,14 @@ type Orders struct {
 }
 
 type ElevatorStatus struct {
-	Endstation  int
-	Floor       int
-	Timeout     bool
-	IsConnected bool
-	Orders      Orders
-	Direction   elevio.MotorDirection
+	Endstation  			int
+	Floor       			int
+	Available				bool //
+	//Timeout     			bool
+	//IsConnected 			bool
+	Orders      			Orders
+	TimeSinceClearedOrder 	time.Time
+	Direction   			elevio.MotorDirection
 }
 
 type Elevator struct {
@@ -88,6 +92,7 @@ func ClearOrdersAtFloor(elevPt *ElevatorStatus) {
 	if (elevPt.Direction == elevio.MD_Down) || (elevPt.Endstation == elevPt.Floor) {
 		elevPt.Orders.Down[elevPt.Floor] = false
 	}
+	elevPt.TimeSinceClearedOrder = time.Now()
 	SetEndstation(elevPt)
 }
 

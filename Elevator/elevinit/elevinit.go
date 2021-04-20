@@ -3,6 +3,7 @@ package elevinit
 import (
 	"fmt"
 
+	// "../Elevator/elevhandler"
 	"../elevhandler"
 	"../elevio"
 )
@@ -15,9 +16,34 @@ func ClearAllOrderLights(numFloors int) {
 	}
 }
 
-func InitializeElevator(addr string, numFloors int, floorCH <-chan int, elevPt *elevhandler.ElevatorStatus) {
+func updateOrderLights(orders <-chan elevhandler.Orders) { // usikker på om denne skal være her FIX
+	for {
+		select {
+		case o := <-orders:
+			for f := 0; f < len(o.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
+				elevio.SetButtonLamp(elevio.BT_Cab, f, o.Inside[f])
+				elevio.SetButtonLamp(elevio.BT_HallUp, f, o.Up[f])
+				elevio.SetButtonLamp(elevio.BT_HallDown, f, o.Down[f])
+			}
+		}
+	}
+}
+
+func InitializeElevator(addr string,
+						numFloors int,
+						floorCH <-chan int,
+						elevPt *elevhandler.ElevatorStatus,
+						orders <-chan elevhandler.Orders) {
 	//elevio.Init(addr, numFloors)
-	ClearAllOrderLights(numFloors)
+	elevPt.Orders = <- orders
+	// ClearAllOrderLights(numFloors)
+
+	for f := 0; f < len(elevPt.Orders.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
+		elevio.SetButtonLamp(elevio.BT_Cab, f, elevPt.Orders.Inside[f])
+		elevio.SetButtonLamp(elevio.BT_HallUp, f, elevPt.Orders.Up[f])
+		elevio.SetButtonLamp(elevio.BT_HallDown, f, elevPt.Orders.Down[f])
+	}
+
 	elevio.SetDoorOpenLamp(false)
 	elevio.SetStopLamp(false)
 	elevio.SetFloorIndicator(0)
@@ -29,6 +55,8 @@ func InitializeElevator(addr string, numFloors int, floorCH <-chan int, elevPt *
 		elevPt.Endstation = f
 		elevio.SetFloorIndicator(f)
 	}
+	fmt.Println(*elevPt)
+
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	fmt.Print("Initializing complete\n")
 }

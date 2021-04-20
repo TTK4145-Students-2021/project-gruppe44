@@ -1,19 +1,25 @@
 {
+	"Inside": [
+		false,
+		false,
+		false,
+		false
+	],
 	"Up": [
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-20T03:32:16.994833+02:00"
+			"TimeStarted": "2021-04-20T15:55:01.4375063+02:00"
 		},
 		{
-			"ID": "",
-			"Confirmed": false,
-			"TimeStarted": "2021-04-20T03:32:17.0174846+02:00"
+			"ID": "peer-192.168.0.116-7872",
+			"Confirmed": true,
+			"TimeStarted": "2021-04-20T15:55:01.6195397+02:00"
 		},
 		{
-			"ID": "",
-			"Confirmed": false,
-			"TimeStarted": "2021-04-20T03:35:22.5003928+02:00"
+			"ID": "peer-192.168.0.116-7872",
+			"Confirmed": true,
+			"TimeStarted": "2021-04-20T15:55:01.8887481+02:00"
 		},
 		{
 			"ID": "",
@@ -30,17 +36,17 @@
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-20T05:22:32.0502284+02:00"
+			"TimeStarted": "2021-04-20T15:55:02.9213927+02:00"
 		},
 		{
-			"ID": "",
-			"Confirmed": false,
-			"TimeStarted": "2021-04-20T05:22:56.7949999+02:00"
+			"ID": "peer-192.168.0.116-7872",
+			"Confirmed": true,
+			"TimeStarted": "2021-04-20T15:55:02.9912053+02:00"
 		},
 		{
-			"ID": "",
-			"Confirmed": false,
-			"TimeStarted": "2021-04-20T05:29:49.3796424+02:00"
+			"ID": "peer-192.168.0.116-7872",
+			"Confirmed": true,
+			"TimeStarted": "2021-04-20T15:55:03.2599627+02:00"
 		}
 	]
 }

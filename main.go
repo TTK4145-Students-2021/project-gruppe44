@@ -20,7 +20,6 @@ import (
 		Network:
 	
 		OrderHandler:
-<<<<<<< HEAD
 			Filehandling:
 			- Integrate in rest of code (mainly updateOrder)
 			- FIX bug where simulation doesnt update
@@ -32,11 +31,6 @@ import (
 			- Integrate with rest of code
 			Send orderlights to elevatorFSM
 			Init() - Removed
-=======
-			Filehandling: Integrate in rest of code
-			Fix what to do with order lights
-			Init()
->>>>>>> c7905cad02271d28c79147688de9e5878326d4da
 		Elevator:
 			Refactoring (remove uneccesary while loops)
 			Emergency stop

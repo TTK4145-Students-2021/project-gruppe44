@@ -15,14 +15,14 @@ func Reboot(addr string, id string) {
 
 func backupPhase() int {
 	fmt.Println("--- Backup phase ---")
-	countOld, err := ioutil.ReadFile("Reboot/count.data")
+	countOld, err := ioutil.ReadFile("Reboot1/count.data")
 	if err != nil {
 		fmt.Println("... timed out")
 		return 0
 	}
 	for {
 		time.Sleep(2*time.Second)
-		countNew, err := ioutil.ReadFile("Reboot/count.data")
+		countNew, err := ioutil.ReadFile("Reboot1/count.data")
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -44,7 +44,7 @@ func primaryPhase(count int, addr string, id string) {
 	}
 	for {
 		count++
-		err := ioutil.WriteFile("Reboot/count.data", []byte(strconv.Itoa(count)), 0777)
+		err := ioutil.WriteFile("Reboot1/count.data", []byte(strconv.Itoa(count)), 0777)
 		if err != nil {
 			fmt.Println(err)
 		}

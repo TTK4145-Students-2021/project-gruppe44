@@ -3,9 +3,9 @@ package elevhandler
 import (
 	"fmt"
 	"math"
-	"time"
+	// "time"
 
-	//"../../Orderhandler" //fikk error import cycle not allowed. Respons: fml
+	//"../../Orderhandler" //fikk error import cycle not allowed.
 	"../elevio"
 )
 
@@ -94,78 +94,78 @@ func DistanceBetweenFloors(floor1, floor2 int) int { // er veldig stygt men go k
 	return int(math.Abs(float64(floor1) - float64(floor2))) //så redeklarere funksjonen her, istedenfor å importe orderHandler FIX
 }
 
-// Used to keep track of time for each order,
-// so that a timeout flag occurs when the order has been active for a long time and not finished.
-func OrderTimeoutFlag(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
+// // Used to keep track of time for each order,
+// // so that a timeout flag occurs when the order has been active for a long time and not finished.
+// func OrderTimeoutFlag(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
 
-	// Calculate expected completion time for order
-	timeLimitPerFloor := 3 * time.Second // Might have to adjust this time...
-	numOfFloorsToMove := DistanceBetweenFloors(elevPt.Floor, order.Floor)
-	totalTimeForOrder := timeLimitPerFloor * time.Duration(numOfFloorsToMove)
+// 	// Calculate expected completion time for order
+// 	timeLimitPerFloor := 4 * time.Second // Might have to adjust this time...
+// 	numOfFloorsToMove := DistanceBetweenFloors(elevPt.Floor, order.Floor)
+// 	totalTimeForOrder := timeLimitPerFloor * time.Duration(numOfFloorsToMove)
 
-	timer := time.NewTimer(totalTimeForOrder)
-	// time.Sleep(totalTimeForOrder)
+// 	timer := time.NewTimer(totalTimeForOrder)
+// 	// time.Sleep(totalTimeForOrder)
 
-	// If elevPT.order == true -> order has not completed, meaning something is wrong. Set TimeoutFlag.
-	for {
-		select {
-		case <-timer.C:
-			switch order.Button {
-				case elevio.BT_Cab:
+// 	// If elevPT.order == true -> order has not completed, meaning something is wrong. Set TimeoutFlag.
+// 	for {
+// 		select {
+// 		case <-timer.C:
+// 			switch order.Button {
+// 				case elevio.BT_Cab:
 			
-					if elevPt.Orders.Inside[order.Floor] == true {
-						elevPt.Timeout = true
-					} else {
-						elevPt.Timeout = false
-					}
-					return
+// 					if elevPt.Orders.Inside[order.Floor] == true {
+// 						elevPt.Timeout = true
+// 					} else {
+// 						elevPt.Timeout = false
+// 					}
+// 					return
 	
-				case elevio.BT_HallUp:
+// 				case elevio.BT_HallUp:
 
-					if elevPt.Orders.Up[order.Floor] == true {
-						elevPt.Timeout = true
-					} else {
-						elevPt.Timeout = false
-					}
-					return
+// 					if elevPt.Orders.Up[order.Floor] == true {
+// 						elevPt.Timeout = true
+// 					} else {
+// 						elevPt.Timeout = false
+// 					}
+// 					return
 
-				case elevio.BT_HallDown:
+// 				case elevio.BT_HallDown:
 
-					if elevPt.Orders.Down[order.Floor] == true {
-						elevPt.Timeout = true
-					} else {
-						elevPt.Timeout = false
-					}
-					return
-			}
-		default:
-		}
-	}
+// 					if elevPt.Orders.Down[order.Floor] == true {
+// 						elevPt.Timeout = true
+// 					} else {
+// 						elevPt.Timeout = false
+// 					}
+// 					return
+// 			}
+// 		default:
+// 		}
+// 	}
 
-	// If elevPT.order == true -> order has not completed, meaning something is wrong. Set TimeoutFlag.
-	// switch order.Button {
-	// case elevio.BT_Cab:
+// 	// If elevPT.order == true -> order has not completed, meaning something is wrong. Set TimeoutFlag.
+// 	// switch order.Button {
+// 	// case elevio.BT_Cab:
 
-	// 	if elevPt.Orders.Inside[order.Floor] == true {
-	// 		elevPt.Timeout = true
-	// 	} else {
-	// 		elevPt.Timeout = false
-	// 	}
+// 	// 	if elevPt.Orders.Inside[order.Floor] == true {
+// 	// 		elevPt.Timeout = true
+// 	// 	} else {
+// 	// 		elevPt.Timeout = false
+// 	// 	}
 
-	// case elevio.BT_HallUp:
+// 	// case elevio.BT_HallUp:
 
-	// 	if elevPt.Orders.Up[order.Floor] == true {
-	// 		elevPt.Timeout = true
-	// 	} else {
-	// 		elevPt.Timeout = false
-	// 	}
+// 	// 	if elevPt.Orders.Up[order.Floor] == true {
+// 	// 		elevPt.Timeout = true
+// 	// 	} else {
+// 	// 		elevPt.Timeout = false
+// 	// 	}
 
-	// case elevio.BT_HallDown:
+// 	// case elevio.BT_HallDown:
 
-	// 	if elevPt.Orders.Down[order.Floor] == true {
-	// 		elevPt.Timeout = true
-	// 	} else {
-	// 		elevPt.Timeout = false
-	// 	}
-	// }
-}
+// 	// 	if elevPt.Orders.Down[order.Floor] == true {
+// 	// 		elevPt.Timeout = true
+// 	// 	} else {
+// 	// 		elevPt.Timeout = false
+// 	// 	}
+// 	// }
+// }

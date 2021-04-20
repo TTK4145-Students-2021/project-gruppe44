@@ -88,85 +88,117 @@ func DistanceBetweenFloors(floor1, floor2 int) int {
 	return int(math.Abs(float64(floor1) - float64(floor2)))
 }
 
+// FIX - find good inputs
+func OrderTimeoutFlag(order elevio.ButtonEvent,
+					  h HallOrders,
+					  timeout chan<- bool){
+
+	// elevCH chan<- elevhandler.ElevatorStatus,
+	// 				  h HallOrders,
+	// 				  order elevio.ButtonEvent) {
+
+	// Må finne ut hva som er rimelig tid å sette timeren på
+	// dvs. en bedre måte å regne det på?
+	// For øyeblikket er det hardcodet
+	
+	timeLimit := 20*time.Second
+	timer := time.NewTimer(timeLimit)
+
+	// Leser fra hallorders kontinuerlig (poller).
+	// Når den blir false før timeren-> alt er good, ellers vil funksjonen sende en elevstatus channel ut med timeoutflagget satt 
+	for {
+		select{
+		case <-timer.C:
+			timeout <- true
+			return
+
+		default:
+			switch order.Button {
+			case elevio.BT_HallUp:
+				if h.Up[order.Floor].Confirmed == false {
+					timer.Stop()
+					return
+				}
+			case elevio.BT_HallDown:
+				if h.Down[order.Floor].Confirmed == false {
+					timer.Stop()
+					return
+				}
+			}
+		}
+	}
+}
+
+// FIX - good inputs
+// the reest must be impemented a well
+func OnTimeout(elevMap map[string]elevhandler.ElevatorStatus,
+			   ordersPt *HallOrders,
+			   disconnected []string,
+			   orderResend chan<- elevio.ButtonEvent) {
+
+	for i :=0; i < len(disconnected); i++{
+		elev := elevMap[disconnected[i]]
+		elev.IsConnected = false
+		elevMap[disconnected[i]] = elev
+		for f := 0; f < len(ordersPt.Down); f++ {
+			if disconnected[i] == ordersPt.Down[f].ID {
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
+				ResendOrder(ordersPt, o, orderResend)
+			}
+			if disconnected[i] == ordersPt.Up[f].ID {
+				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallUp}
+				ResendOrder(ordersPt, o, orderResend)
+			}
+		}
+	}					
+}
+
+// FIX BUG where simulation doesn't update
+// Add network diconnect
+// integrate with rest of code (mainly updateOrder)
 // When the order list is altered we will save the orders to file,
 // this way we always have an updated order list in case of a crash.
 // This file will be loaded on boot/reboot.
 // This module will have the needed functions to save and load the elevator status and order list.
 func FileHandler(elevatorAfterStartup <-chan bool,
-				 elevCH chan<- elevhandler.ElevatorStatus,
 				 ordersCH chan<- HallOrders,
-				 otherOrdersAfterNetworkLoss <-chan HallOrders,
-				 updateInternalOrder <-chan map[string]elevhandler.ElevatorStatus,
-				 updateExternalOrders <-chan HallOrders,
-				 elev elevhandler.Elevator) {
-	
-	// READ only happens on boot/reboot. We then READ the following:
-	// - ElevatorStatus.JSON (Might be unnecessary if it remembers what buttons people have pushed in the elevator somewhere else)
-	// - AllOrders.JSON
-	// When this happens, it sends HallOrders and ElevatorStatus out of this function as channels
-
-	// WRITE happens on new order, completion of order, and after network loss. We then WRITE to the following:
-	// - ElevatorStatus.JSON (Might be unnecessary if it remembers what buttons people have pushed in the elevator somewhere else)
-	// - AllOrders.JSON
+				 updateExternalOrders <-chan HallOrders){
+				//  afterDisconnect <-chan HallOrders) {
 	
 	// TODO:
 	// We might combine otherOrdersAfterNetworkLoss and updateExternalOrders to the same case,
 	// because they are identical in logic (redundant)
 
-	// NOTE TO SELF:
-	// - Open() is READONLY
-	// - Create() for editing (overwrites everything from before)
-
-	var elevTemp elevhandler.ElevatorStatus
 	var ordersTemp HallOrders
 
 	for {
 		select {
 		case <-elevatorAfterStartup:
+		fmt.Println("Boot")
 		// Load from JSON files and send values out of Filehandler as channels
-		elevatorContent,_ := ioutil.ReadFile("ElevatorStatus.JSON")
-		allOrdersContent,_ := ioutil.ReadFile("AllOrders.JSON")
-
-		// [norsk] På denne måten slipper man å modifisere faktiske statuser/pekere i Filehandleren
-		json.Unmarshal(elevatorContent, &elevTemp)
+		allOrdersContent,_ := ioutil.ReadFile("Orderhandler/AllOrders.JSON")
 		json.Unmarshal(allOrdersContent, &ordersTemp)
-
-		elevCH <-elevTemp
 		ordersCH <-ordersTemp
 
-		case hall := <-otherOrdersAfterNetworkLoss: 
-		// Updates AllOrders.JSON because of network loss.
-		// Suggestion: 
-		// - Might make this happen on: new order, finished order and after network loss
-		// Send content from hall to ordersCH were some other function modifies the actual AllOrderslist
-		// ^^ This line above might already be done somewhere else, therefore unnecessary?
-		allOrdersFile,_ := os.Create("AllOrders.JSON")
+		case hall := <-updateExternalOrders:
+		// Updates AllOrders.JSON file with updateInternalOrder
+		allOrdersFile,_ := os.Create("Orderhandler/AllOrders.JSON")
 		allOrdersJSONcontent,_ :=json.MarshalIndent(hall,"","\t")
 		writeAllOrdersToJSON := bufio.NewWriter(allOrdersFile)
 		writeAllOrdersToJSON.Write(allOrdersJSONcontent)
 		writeAllOrdersToJSON.Flush()
+		return
+		
+		// case disc := <-afterDisconnect:
+		// // Updates AllOrders.JSON file with updateInternalOrder
+		// allOrdersFile,_ := os.Create("Orderhandler/AllOrders.JSON")
+		// allOrdersJSONcontent,_ :=json.MarshalIndent(disc,"","\t")
+		// writeAllOrdersToJSON := bufio.NewWriter(allOrdersFile)
+		// writeAllOrdersToJSON.Write(allOrdersJSONcontent)
+		// writeAllOrdersToJSON.Flush()
+		// return
 
-		case h := <-updateExternalOrders: 
-		// ^^ Might remove this cause it is similar to the one above
-		// Updates AllOrders.JSON file with updateInternalOrder
-		// Might be unnecessary to send a channel
-		allOrdersFile,_ := os.Create("AllOrders.JSON")
-		allOrdersJSONcontent,_ :=json.MarshalIndent(h,"","\t")
-		writeAllOrdersToJSON := bufio.NewWriter(allOrdersFile)
-		writeAllOrdersToJSON.Write(allOrdersJSONcontent)
-		writeAllOrdersToJSON.Flush()
-
-		case e := <-updateInternalOrder:
-		// ^^ Might remove this cause it might be unnecessary?
-		// Happens on: new order, finished order
-		// Updates ElevatorStatus.JSON file with updateInternalOrder
-		// Assumes this elevator and not another one
-		// Might be unnecesary to send a channel
-		elevatorFile,_ := os.Create("ElevatorStatus.JSON")
-		elevatorJSONcontent,_ :=json.MarshalIndent(e[elev.ID],"","\t")
-		writeElevatorStatusToJSON := bufio.NewWriter(elevatorFile)
-		writeElevatorStatusToJSON.Write(elevatorJSONcontent)
-		writeElevatorStatusToJSON.Flush()
+		default:
 		}
 	}
 }
@@ -194,7 +226,9 @@ func OrderHandlerFSM(myID string,
 					 orderOut chan<- elevio.ButtonEvent,
 					 orderResend chan<- elevio.ButtonEvent,
 					 allOrders chan<- elevhandler.Orders, //unused FIX
-					 disconCH <-chan []string) {
+					 disconCH <-chan []string,
+					 elevatorAfterStartup <-chan bool){
+					//  timeout chan<- bool){ // Filehandler
 	// Inputs:
 	// NewOrder ButtonEvent: This is a new order that should be handled.
 	// FinishedOrder ButtonEvent: This is a finished order that should be cleared.
@@ -210,23 +244,27 @@ func OrderHandlerFSM(myID string,
 	//var hallOrders HallOrders
 	ordersPt := &hallOrders
 	elevMap = make(map[string]elevhandler.ElevatorStatus)
+	// elevCH := make(chan elevhandler.ElevatorStatus)
 	for {
 		select {
 		case o := <-newOrder:
-			ChooseElevator(elevMap, ordersPt, myID, o, orderOut) 
+			ChooseElevator(elevMap, ordersPt, myID, o, orderOut)
 		case e := <-elev:
-			UpdateElevators(elevMap, ordersPt, e, orderResend)
+			UpdateElevators(elevMap, ordersPt, e, orderResend, elevatorAfterStartup)
+			// go OrderTimeoutFlag(elevCH, hallOrders, order)
 		case d := <-disconCH:
 			OnDisconnect(elevMap, ordersPt, d, orderResend)
+		// case t := <-timetimetime: // FIXFIXFIX
+		// 	OnTimeout(elevMap, ordersPt, d, timeout)
 		}
 	}
 }
 
-// When the program turns on, it will load all local data from file.
-// If there is nothing to load it will initialize with zero orders.
-func Init() {
-
-}
+// // When the program turns on, it will load all local data from file.
+// // If there is nothing to load it will initialize with zero orders.
+// func Init() {
+// 	// Might have been implemented in Filehandler already
+// }
 
 // The state machine for the orderHandler,
 // waiting for every other function to do their thing before giving order list to the Network module.
@@ -253,9 +291,7 @@ func OnDisconnect(elevMap map[string]elevhandler.ElevatorStatus,
 				ResendOrder(ordersPt, o, orderResend)
 			}
 		}
-		
 	}					
-
 }
 
 // When OrderHandler receives a new order,
@@ -292,6 +328,8 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	//add order to list
 	switch order.Button {
 	case elevio.BT_HallUp:
+		// fmt.Println("Got order request2") //Debugging
+
 		ordersPt.Up[order.Floor].ID = chosenElev
 		ordersPt.Up[order.Floor].TimeStarted = time.Now()
 	case elevio.BT_HallDown:
@@ -330,7 +368,7 @@ func ConfirmOrder(ordersPt *HallOrders, id string, order elevio.ButtonEvent) {
 func ResendOrder(ordersPt *HallOrders, order elevio.ButtonEvent, orderResend chan<- elevio.ButtonEvent) {
 	ClearOrder(ordersPt, order) //does it need to clear? FIX
 	orderResend<-order
-	fmt.Println("Resendt order")
+	fmt.Println("Resent order")
 }
 
 // When a new ElevatorStatus or Connection bool is received,
@@ -339,20 +377,34 @@ func ResendOrder(ordersPt *HallOrders, order elevio.ButtonEvent, orderResend cha
 func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 					 ordersPt *HallOrders,
 					 elev elevhandler.Elevator,
-					 orderResend chan<- elevio.ButtonEvent) {
+					 orderResend chan<- elevio.ButtonEvent,
+					 elevatorAfterStartup <-chan bool) {	// De tre nederste kanalene er for Filehandleren 
 	//TODO: save map to file
 	//TODO: check if the elevator has order not in list, if yes add order.
 	elevMap[elev.ID] = elev.Status
+
+	allOrders := make(chan HallOrders,1)
+	updateExternalOrders := make(chan HallOrders, 1)
+
+	go FileHandler(elevatorAfterStartup, allOrders, updateExternalOrders)
+	
+	time.Sleep(10*time.Millisecond) // Might have to set some time delay (ideally not)
+	select{
+	case o := <-allOrders:
+		*ordersPt = o
+	default: // Do nothing
+	}
+
 	//fmt.Print("Updated elevator Map: ")
 	//fmt.Println(elevMap)
 	for f := 0; f < len(ordersPt.Down); f++ {
 		switch { //down orders
 		case (elev.ID == ordersPt.Down[f].ID) && ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: //confirmed, not taken -> order is finished
 			ClearOrder(ordersPt, elevio.ButtonEvent{Button: elevio.BT_HallDown, Floor: f})
-
+			fmt.Println("1")
 		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && elev.Status.Orders.Down[f]: //not confirmed and taken -> confirm order
 			ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallDown, Floor: f})
-
+			fmt.Println("2")
 		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: //not confirmed, not taken -> resend if timed out?
 			fmt.Println("Should resend order")
 			threshold := time.Millisecond * 250 // time given to confirm order
@@ -374,9 +426,11 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 		switch { // up orders
 		case (elev.ID == ordersPt.Up[f].ID) && ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]: //confirmed, not taken -> order is finished
 			ClearOrder(ordersPt, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
+			fmt.Println("3")
 
 		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && elev.Status.Orders.Up[f]: //not confirmed and taken -> confirm order
 			ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
+			fmt.Println("4")
 
 		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]: //not confirmed, not taken -> resend if timed out?
 			fmt.Println("Should resend order")
@@ -398,6 +452,12 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 			}
 		}
 	}
+	updateExternalOrders <- *ordersPt
+	// select{
+	// case o := <-allOrders:
+	// 	*ordersPt = o
+	// default: // Do nothing
+	// }
 }
 
 /*

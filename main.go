@@ -19,30 +19,22 @@ import (
 		Network:
 	
 		OrderHandler:
-			Filehandling: Integrate in rest of code
+			Filehandling:
+			- Integrate in rest of code (mainly updateOrder)
+			- FIX bug where simulation doesnt update
+			- Must receive networkdisconnet from somewhere
+			OrderTimeoutFlag:
+			- Integrate in rest of code (uncertain where it should be called)
+			- Find good inputs
+			OnTimeout:
+			- Integrate with rest of code
 			Send orderlights to elevatorFSM
-			Init()
+			Init() - Removed
 		Elevator:
 			Refactoring (remove uneccesary while loops)
 			Emergency stop
 		FIX README files and similar stuff that we need/dont need
 	
-	Suggestion:
-		Go through code and try to minimize the amount of times pointers are used/modified, i.e.:
-		(some of these might be necessary)
-			elevhandler.AddOrder
-			elevhandler.SetEndstation
-			elevhandler.ClearOrdersAtFloor
-			elevhandler.OrderTimeoutFlag
-			elevinit.InitializeElevator
-			Elevator.idle
-			Elevator.moving
-			Elevator.stop
-			Orderhandler.ChooseElevator
-			Orderhandler.ConfirmOrder
-			Orderhandler.ResendOrder
-			Orderhandler.UpdateElevators
-			Orderhandler.ClearOrder
 */
 
 func main() {
@@ -80,7 +72,9 @@ func main() {
 	discon 			:= make(chan []string)
 	orderResend 	:= make(chan elevio.ButtonEvent)
 	orderRemove 	:= make(chan elevio.ButtonEvent)
-	
+	startup			:= make(chan bool, 1)
+	// timeout			:= make(chan bool)
+
 	go func() { //temp for å tømme ubrukte channels
 		for {
 			select {
@@ -90,9 +84,10 @@ func main() {
 			}
 		}
 	}()
-	
+	// Happens only at boot
+	startup <- true
 
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, orderLights, discon)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, orderLights, discon, startup) //timeout)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove) //timeout)
 }

@@ -162,7 +162,7 @@ func OnTimeout(elevMap map[string]elevhandler.ElevatorStatus,
 // this way we always have an updated order list in case of a crash.
 // This file will be loaded on boot/reboot.
 // This module will have the needed functions to save and load the elevator status and order list.
-func FileHandler(hall AllOrders){
+func FileHandler(hall AllOrders, elev elevhandler.ElevatorStatus){
 				//  updateExternalOrders <-chan AllOrders){
 				//  elevatorAfterStartup <-chan bool,
 				//  ordersCH chan<- AllOrders,
@@ -196,7 +196,11 @@ func FileHandler(hall AllOrders){
 		// fmt.Println("asdfg")
 		// fmt.Println("NEI")
 		// return
-		
+		elevatorFile,_ := os.Create("Orderhandler/ElevatorStatus.JSON")
+		elevatorJSONcontent,_ :=json.MarshalIndent(elev,"","\t")
+		writeElevatorStatusToJSON := bufio.NewWriter(elevatorFile)
+		writeElevatorStatusToJSON.Write(elevatorJSONcontent)
+		writeElevatorStatusToJSON.Flush()
 		// case disc := <-afterDisconnect:
 		// // Updates AllOrders.JSON file with updateInternalOrder
 		// allOrdersFile,_ := os.Create("Orderhandler/AllOrders.JSON")
@@ -236,7 +240,7 @@ func OrderHandlerFSM(myID string,
 					 elev <-chan elevhandler.Elevator,
 					 orderOut chan<- elevio.ButtonEvent,
 					 orderResend chan<- elevio.ButtonEvent,
-					 allOrders chan<- elevhandler.Orders, //unused FIX
+					 elevInit chan<- elevhandler.ElevatorStatus,
 					 disconCH <-chan []string,
 					 elevatorAfterStartup <-chan bool){
 					//  timeout chan<- bool){ // Filehandler
@@ -246,10 +250,12 @@ func OrderHandlerFSM(myID string,
 	// confirmedOrder ButtonEvent: This is and order to be confirmed
 	// Elevator struct: Includes ElevatorStatus and ElevatorID. This is used to evaluate the cost of an order on each elevator.
 	// IsConnected struct: Contains a Connected bool that says if the elevator is connected and ElevatorID.
-
+	
 	// Outputs:
 	// Orders struct: A list of all orders, so that the elevator can turn on/off lights.
 	// NewOrder ButtonEvent: The new order, sendt to the elevator who is going to take the order.
+	
+	
 	o := Order{ID: "", Confirmed: false}
 	AllOrders := AllOrders{Inside: []bool{false,false,false,false}, Up: []Order{o, o, o, o}, Down: []Order{o, o, o, o}} //FIX: initialize in init, remove set order count
 	//var AllOrders AllOrders
@@ -257,8 +263,8 @@ func OrderHandlerFSM(myID string,
 	ordersPt := &AllOrders
 	elevMap = make(map[string]elevhandler.ElevatorStatus)
 	// elevCH := make(chan elevhandler.ElevatorStatus)
-	Init(myID, ordersPt, allOrders)
-
+	Init(myID, ordersPt, elevInit)
+	//go updateOrderLights(ordersPt) FIX
 	for {
 		// ordersTemp := *ordersPt
 		select {
@@ -275,22 +281,36 @@ func OrderHandlerFSM(myID string,
 		}
 		// if !reflect.DeepEqual(ordersTemp, *ordersPt) {
 			hallTemp := *ordersPt
-			FileHandler(hallTemp)
+			elevTemp := elevMap[myID]
+			FileHandler(hallTemp, elevTemp)
 		// }
 	}
 }
 	
 // When the program turns on, it will load all local data from file.
 // If there is nothing to load it will initialize with zero orders.
-func Init(myID string, ordersPt *AllOrders, myOrders chan<- elevhandler.Orders) {
+func Init(myID string, ordersPt *AllOrders, elevCH chan<- elevhandler.ElevatorStatus){// myOrders chan<- elevhandler.Orders) {
 	// Load from JSON files and send values out of Filehandler as channels
+	fmt.Println("in orderhandler init")
+	var elevTemp elevhandler.ElevatorStatus
+	elevPt := &elevTemp
+	
 	allOrdersContent,_ := ioutil.ReadFile("Orderhandler/AllOrders.JSON")
 	json.Unmarshal(allOrdersContent, ordersPt)
+	elevStatusContent,_ := ioutil.ReadFile("Orderhandler/ElevatorStatus.JSON")
+	json.Unmarshal(elevStatusContent, elevPt)
+	elevCH <- elevTemp
+
+
+	/*
 	ordersTemp := elevhandler.Orders{Inside:	[]bool{false, false, false, false},
 									 Up:		[]bool{false, false, false, false},
 									 Down:		[]bool{false, false, false, false}} //FIX
-	fmt.Println("gerggerg")
 
+*/
+	
+
+	/*
 	for f := 0; f < len(ordersPt.Up); f++ {
 		ordersTemp.Inside[f] = ordersPt.Inside[f]
 		
@@ -308,6 +328,7 @@ func Init(myID string, ordersPt *AllOrders, myOrders chan<- elevhandler.Orders) 
 	
 	fmt.Println(ordersTemp)
 	myOrders <- ordersTemp
+	*/
 	fmt.Println("Boot")
 }
 

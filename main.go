@@ -65,7 +65,7 @@ func main() {
 
 	elevFromFSM		:= make(chan elevhandler.Elevator)
 	elevFromNet		:= make(chan elevhandler.Elevator)
-	orderLights		:= make(chan elevhandler.Orders)
+	elevInit		:= make(chan elevhandler.ElevatorStatus)
 	orderFromElev	:= make(chan elevio.ButtonEvent)
 	orderFromHandler:= make(chan elevio.ButtonEvent)
 	orderFromNet	:= make(chan elevio.ButtonEvent)
@@ -87,7 +87,7 @@ func main() {
 	// Happens only at boot
 	startup <- true
 
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, orderLights, discon, startup) //timeout)
+	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon, startup) //timeout)
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
-	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, orderLights) //timeout)
+	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, elevInit) //timeout)
 }

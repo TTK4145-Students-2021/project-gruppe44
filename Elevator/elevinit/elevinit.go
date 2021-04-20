@@ -33,9 +33,9 @@ func InitializeElevator(addr string,
 						numFloors int,
 						floorCH <-chan int,
 						elevPt *elevhandler.ElevatorStatus,
-						orders <-chan elevhandler.Orders) {
+						elev <-chan elevhandler.ElevatorStatus) {
 	//elevio.Init(addr, numFloors)
-	elevPt.Orders = <- orders
+	*elevPt = <- elev
 	// ClearAllOrderLights(numFloors)
 
 	for f := 0; f < len(elevPt.Orders.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
@@ -52,7 +52,8 @@ func InitializeElevator(addr string,
 	select {
 	case f := <-floorCH:
 		elevPt.Floor = f
-		elevPt.Endstation = f
+		//elevPt.Endstation = f
+		elevhandler.SetEndstation(elevPt)
 		elevio.SetFloorIndicator(f)
 	}
 	fmt.Println(*elevPt)

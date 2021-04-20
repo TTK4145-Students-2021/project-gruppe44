@@ -16,7 +16,7 @@ func ElevatorFSM(id string,
 				 orderOut chan<- elevio.ButtonEvent,
 				 elevCH chan<- elevhandler.Elevator,
 				 orderRemove <-chan elevio.ButtonEvent,
-				 orderInit <-chan elevhandler.Orders){
+				 elevInit <-chan elevhandler.ElevatorStatus){
 				//  timeout <-chan bool) { // uimplementert
 
 	// "localhost:15657"
@@ -45,7 +45,7 @@ func ElevatorFSM(id string,
 											 Direction:	 elevio.MD_Stop}
 	elevPt := &myElevator
 
-	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt, orderInit)
+	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt, elevInit)
 
 	/*
 	ordersCH := make(chan elevhandler.Orders)

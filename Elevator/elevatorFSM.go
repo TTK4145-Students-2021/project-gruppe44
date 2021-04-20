@@ -90,8 +90,10 @@ func ElevatorFSM(id string,
 			}
 		*/
 	}()
+
 	state := "idle_state"
 	fmt.Println(*elevPt)
+	
 	for {
 		//time.Sleep(50 * time.Millisecond)
 		switch state {

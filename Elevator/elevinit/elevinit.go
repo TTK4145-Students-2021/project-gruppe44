@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	// "../Elevator/elevhandler"
 	"../elevhandler"
 	"../elevio"
 )

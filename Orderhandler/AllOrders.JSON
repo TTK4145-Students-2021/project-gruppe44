@@ -1,0 +1,52 @@
+{
+	"Inside": [
+		false,
+		false,
+		false,
+		false
+	],
+	"Up": [
+		{
+			"ID": "",
+			"Confirmed": false,
+			"TimeStarted": "2021-04-21T00:21:19.6757816+02:00"
+		},
+		{
+			"ID": "",
+			"Confirmed": false,
+			"TimeStarted": "2021-04-21T00:21:00.1422853+02:00"
+		},
+		{
+			"ID": "",
+			"Confirmed": false,
+			"TimeStarted": "2021-04-21T00:21:18.4859827+02:00"
+		},
+		{
+			"ID": "",
+			"Confirmed": false,
+			"TimeStarted": "2021-04-21T00:21:00.1572464+02:00"
+		}
+	],
+	"Down": [
+		{
+			"ID": "",
+			"Confirmed": false,
+			"TimeStarted": "2021-04-21T00:21:00.1392933+02:00"
+		},
+		{
+			"ID": "",
+			"Confirmed": false,
+			"TimeStarted": "2021-04-21T00:21:00.1412868+02:00"
+		},
+		{
+			"ID": "",
+			"Confirmed": false,
+			"TimeStarted": "2021-04-21T00:21:00.1422853+02:00"
+		},
+		{
+			"ID": "",
+			"Confirmed": false,
+			"TimeStarted": "2021-04-21T00:21:00.1522576+02:00"
+		}
+	]
+}

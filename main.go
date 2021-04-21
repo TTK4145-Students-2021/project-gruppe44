@@ -36,14 +36,13 @@ import (
 */
 
 func main() {
-	numFloors := 4
-	//addr := "localhost:15657"
-
-	// choose addr by '-addr=my_address'
+	
+	var numFloors int 
+	flag.IntVar(&numFloors, "numFloors", 4, "Number of floors to the elevator")
+	
 	var addr string
 	flag.StringVar(&addr, "addr", "localhost:15657", "Address of elevator server")
-	// Our id can be anything. Here we pass it on the command line, using
-	// `go run main.go -id=our_id`
+	
 	var id string
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
@@ -79,7 +78,7 @@ func main() {
 		}
 	}()
 
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon, timeOutToElev)
+	go Orderhandler.OrderHandlerFSM(id, numFloors, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon, timeOutToElev)
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
 	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, elevInit, timeOutToElev)
 }

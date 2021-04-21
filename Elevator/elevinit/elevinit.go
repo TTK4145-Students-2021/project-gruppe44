@@ -8,18 +8,15 @@ import (
 	"../elevio"
 )
 
-
 func InitializeElevator(addr string,
 						numFloors int,
 						floorCH <-chan int,
 						elevPt *elevhandler.ElevatorStatus,
 						elev <-chan elevhandler.ElevatorStatus) {
-	//elevio.Init(addr, numFloors)
 	*elevPt = <- elev
 	fmt.Println(*elevPt)
-	// ClearAllOrderLights(numFloors)
 
-	for f := 0; f < len(elevPt.Orders.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
+	for f := 0; f < len(elevPt.Orders.Inside); f++ {
 		elevio.SetButtonLamp(elevio.BT_Cab, f, elevPt.Orders.Inside[f])
 		elevio.SetButtonLamp(elevio.BT_HallUp, f, elevPt.Orders.Up[f])
 		elevio.SetButtonLamp(elevio.BT_HallDown, f, elevPt.Orders.Down[f])
@@ -37,7 +34,6 @@ func InitializeElevator(addr string,
 	}
 	elevhandler.SetEndstation(elevPt)
 	elevPt.Available = true
-	//elevPt.DoorOpen = false
 	elevPt.TimeSinceNewFloor = time.Now()
 	switch {
 	case elevPt.Endstation < elevPt.Floor:

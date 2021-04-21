@@ -19,9 +19,6 @@ func ElevatorFSM(id string,
 				 elevInit <-chan elevhandler.ElevatorStatus,
 				 timeOutToElev <-chan bool){
 
-	// "localhost:15657"
-	// numFloors := 4
-
 	elevio.Init(addr, numFloors)
 
 	drv_floors	:= make(chan int)
@@ -34,60 +31,28 @@ func ElevatorFSM(id string,
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	myOrders := elevhandler.Orders{Inside:	[]bool{false, false, false, false},
-								   Up:		[]bool{false, false, false, false},
-								   Down:	[]bool{false, false, false, false}} //FIX
-
-	myElevator := elevhandler.ElevatorStatus{Endstation: 0,
-											 Orders:	 myOrders,
-											 Floor:		 0,
-											 Available:  true,
-											 Direction:	 elevio.MD_Stop}
+	var myElevator elevhandler.ElevatorStatus
 	elevPt := &myElevator
 
 	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt, elevInit)
-
-	/*
-	ordersCH := make(chan elevhandler.Orders)
-	go func() { //temp, skal få hallOrders liste fra handler/network FIX
-		for {
-			time.Sleep(100 * time.Millisecond)
-			ordersCH <- elevPt.Orders
-		}
-	}()
-	go updateOrderLights(ordersCH)
-	*/
 	
-	go func() { //only send hall orders to network
+	go func() { // Only send hall orders to network
 		for {
 			o := <-drv_btn
 			if o.Button == elevio.BT_Cab {
-				orderRecieved <- o //send cab orders directly to this elevator
+				orderRecieved <- o // Send cab orders directly to this elevator
 			} else {
 				orderOut <- o
 			}
 		}
 	}()
 
-	go func() { //send elevator status to network
+	go func() { // Send elevator status to network
 		sendRate := 50 * time.Millisecond
 		for {
 			elevCH <- elevhandler.Elevator{ID: id, Status: *elevPt}
 			time.Sleep(sendRate)
 		}
-
-		/*
-			prevElev := *elevPt
-			elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
-			for {
-				time.Sleep(sendRate)
-
-				if !(reflect.DeepEqual(prevElev, *elevPt)) { //burde ikke bare sende en gang, pga packet loss FIX
-					prevElev = *elevPt
-					elevCH <- elevhandler.Elevator{ID: id, Status: prevElev}
-				}
-			}
-		*/
 	}()
 	doorOpen := make(chan bool)
 	doorTimeout := make(chan bool)
@@ -152,14 +117,6 @@ func onFloorSensor(elevPt *elevhandler.ElevatorStatus, floor int){
 	elevPt.Floor = floor
 	elevPt.TimeSinceNewFloor = time.Now()
 	elevPt.Available = true
-	/*
-	if !elevPt.Available {
-		elevPt.Available = true
-		elevio.SetMotorDirection(elevio.MD_Stop)
-		elevPt.Direction = elevio.MD_Stop
-		elevPt.State = elevhandler.ST_Idle
-	}
-	*/
 	elevio.SetFloorIndicator(floor)
 	switch elevPt.State {
 	case elevhandler.ST_MovingUp:
@@ -207,7 +164,7 @@ func doorTimer(elevState elevhandler.ElevatorState, obstr <-chan bool, finished 
 
 func onDoorTimeout(elevPt *elevhandler.ElevatorStatus){
 	fmt.Println("onDoorTimeout")
-	elevhandler.ClearOrdersAtFloor(elevPt) //Quickfix, clear orders after door, else order doesn't have time to confirm first when order on same floor. FIX
+	elevhandler.ClearOrdersAtFloor(elevPt)
 	elevPt.Available = true
 	elevio.SetDoorOpenLamp(false)
 	switch{
@@ -217,13 +174,15 @@ func onDoorTimeout(elevPt *elevhandler.ElevatorStatus){
 		elevPt.Direction = elevio.MD_Stop
 		elevPt.State = elevhandler.ST_Idle
 		fmt.Println("State: Idle")
-	case elevPt.Endstation > elevPt.Floor: //elevPt.Direction == elevio.MD_Up &&
+
+	case elevPt.Endstation > elevPt.Floor:
 		fmt.Println("Endstation above floor")
  		elevio.SetMotorDirection(elevio.MD_Up)
 		elevPt.Direction = elevio.MD_Up
 		elevPt.State = elevhandler.ST_MovingUp
 		fmt.Println("State: MovingUp")
-	case elevPt.Endstation < elevPt.Floor: //elevPt.Direction == elevio.MD_Down &&
+
+	case elevPt.Endstation < elevPt.Floor:
 		fmt.Println("Endstation below floor")
 		elevio.SetMotorDirection(elevio.MD_Down)
 		elevPt.Direction = elevio.MD_Down
@@ -235,7 +194,6 @@ func onDoorTimeout(elevPt *elevhandler.ElevatorStatus){
 func onTimeout(elevPt *elevhandler.ElevatorStatus){
 	fmt.Println("onTimeout")
 	elevPt.Available = false
-	//elevPt.State = elevhandler.ST_TimedOut
 	checkRate := 100*time.Millisecond
 	for !elevPt.Available{
 		time.Sleep(checkRate)
@@ -255,9 +213,9 @@ func onTimeout(elevPt *elevhandler.ElevatorStatus){
 			return
 		}
 	}
-
 }
 
+/*
 func updateOrderLights(orders <-chan elevhandler.Orders) { // usikker på om denne skal være her FIX
 	for {
 		select {
@@ -270,3 +228,4 @@ func updateOrderLights(orders <-chan elevhandler.Orders) { // usikker på om den
 		}
 	}
 }
+*/

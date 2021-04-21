@@ -7,7 +7,6 @@ import (
 	"../elevio"
 )
 
-var numFloors int = 4
 
 
 type ElevatorState int
@@ -73,13 +72,13 @@ func SetEndstation(elevPt *ElevatorStatus) {
 	elevPt.Endstation = elevPt.Floor
 	switch elevPt.Direction {
 	case elevio.MD_Down:
-		for f := numFloors - 1; f >= 0; f-- {
+		for f := len(elevPt.Orders.Inside) - 1; f >= 0; f-- {
 			if elevPt.Orders.Inside[f] || elevPt.Orders.Down[f] || elevPt.Orders.Up[f] {
 				elevPt.Endstation = f
 			}
 		}
 	case elevio.MD_Up, elevio.MD_Stop: //bias til å gå oppover
-		for f := 0; f < numFloors; f++ {
+		for f := 0; f < len(elevPt.Orders.Inside); f++ {
 			if elevPt.Orders.Inside[f] || elevPt.Orders.Down[f] || elevPt.Orders.Up[f] {
 				elevPt.Endstation = f
 			}

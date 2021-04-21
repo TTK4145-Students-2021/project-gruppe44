@@ -119,17 +119,6 @@ func timeoutCheck(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *AllOr
 					timeout <- ordersPt.Up[f].ID
 				}
 			}
-
-
-
-			/*
-			if (ordersPt.Down[f].ID != "") && time.Now().After(ordersPt.Down[f].TimeStarted.Add(timeLimit)){
-				timeout <- ordersPt.Down[f].ID
-			}
-			if (ordersPt.Up[f].ID != "") && time.Now().After(ordersPt.Up[f].TimeStarted.Add(timeLimit)){
-				timeout <- ordersPt.Up[f].ID
-			}
-			*/
 		}
 	}
 }
@@ -144,27 +133,7 @@ func OnTimeout(elevMap map[string]elevhandler.ElevatorStatus,
 	if timedOut == myID{
 		timeoutElev <- false
 	}
-	OnDisconnect(elevMap, ordersPt, []string{timedOut}, orderResend)
-
-	
-
-	/*
-	for i :=0; i < len(disconnected); i++{
-		elev := elevMap[disconnected[i]]
-		elev.IsConnected = false
-		elevMap[disconnected[i]] = elev
-		for f := 0; f < len(ordersPt.Down); f++ {
-			if disconnected[i] == ordersPt.Down[f].ID {
-				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
-				ResendOrder(ordersPt, o, orderResend)
-			}
-			if disconnected[i] == ordersPt.Up[f].ID {
-				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallUp}
-				ResendOrder(ordersPt, o, orderResend)
-			}
-		}
-	}
-	*/					
+	OnDisconnect(elevMap, ordersPt, []string{timedOut}, orderResend)	
 }
 
 // When the order list is altered we will save the orders to file,
@@ -205,6 +174,7 @@ var elevMap map[string]elevhandler.ElevatorStatus //Map to store all the elevato
 
 // It will receive and keep track of all orders and use a cost function to decide which elevator should take which order.
 func OrderHandlerFSM(myID string,
+					 numFloors int,
 					 newOrder <-chan elevio.ButtonEvent,
 					 elev <-chan elevhandler.Elevator,
 					 orderOut chan<- elevio.ButtonEvent,
@@ -222,16 +192,17 @@ func OrderHandlerFSM(myID string,
 	// Outputs:
 	// Orders struct: A list of all orders, so that the elevator can turn on/off lights.
 	// NewOrder ButtonEvent: The new order, sendt to the elevator who is going to take the order.
-	
+	/*
 	o 		  := Order{ID: "", Confirmed: false}
 	AllOrders := AllOrders{	Inside: []bool{false,false,false,false},
 								Up:		[]Order{o, o, o, o},
 								Down:	[]Order{o, o, o, o}} //FIX: initialize in init, remove set order count
-	
-	ordersPt := &AllOrders
+*/
+	var hallOrders AllOrders 
+	ordersPt := &hallOrders
 	elevMap  =  make(map[string]elevhandler.ElevatorStatus)
 	// elevCH := make(chan elevhandler.ElevatorStatus)
-	Init(myID, ordersPt, elevMap, elevInit)
+	Init(myID, numFloors, ordersPt, elevMap, elevInit)
 	//go updateOrderLights(ordersPt) FIX
 	elevTimedOut := make(chan string)
 	go timeoutCheck(elevMap, ordersPt, myID, elevTimedOut) 
@@ -257,35 +228,41 @@ func OrderHandlerFSM(myID string,
 	
 // When the program turns on, it will load all local data from file.
 // If there is nothing to load it will initialize with zero orders.
-func Init(myID string, ordersPt *AllOrders, elevMap map[string]elevhandler.ElevatorStatus, elevCH chan<- elevhandler.ElevatorStatus){// myOrders chan<- elevhandler.Orders) {
+func Init(myID string, numFloors int, ordersPt *AllOrders, elevMap map[string]elevhandler.ElevatorStatus, elevCH chan<- elevhandler.ElevatorStatus){// myOrders chan<- elevhandler.Orders) {
 	// Load from JSON files and send values out of Filehandler as channels
 	fmt.Println("in orderhandler init")
 	var elevTemp elevhandler.ElevatorStatus
 	elevPt := &elevTemp
 	
-	allOrdersContent,_ := ioutil.ReadFile("Orderhandler/AllOrders.JSON")
-	json.Unmarshal(allOrdersContent, ordersPt)
-	elevStatusContent,_ := ioutil.ReadFile("Orderhandler/ElevatorStatus.JSON")
-	json.Unmarshal(elevStatusContent, elevPt)
+	allOrdersContent,err := ioutil.ReadFile("Orderhandler/AllOrders.JSON")
+	if err != nil{
+		o := Order{ID: "", Confirmed: false}
+		var hallOrders AllOrders
+		for i := 0; i < numFloors; i++{ //create blank orders struct with numFloors floors
+			hallOrders.Up = append(hallOrders.Up, o)
+			hallOrders.Down = append(hallOrders.Down, o)
+		}
+		*ordersPt = hallOrders
+	}else{
+		json.Unmarshal(allOrdersContent, ordersPt)
+	}
 	
-	elevMap[myID] = elevTemp
-	if elevPt.Orders.Inside == nil{ //FIX
-		elevPt.Orders.Inside = []bool{false, false, false, false}
-	} 
-	if elevPt.Orders.Down == nil{
-		elevPt.Orders.Down = []bool{false, false, false, false}
+	
+	elevStatusContent,err := ioutil.ReadFile("Orderhandler/ElevatorStatus.JSON")
+	if err != nil{
+		var myOrders elevhandler.Orders
+		for i := 0; i < numFloors; i++{ //create blank orders struct with numFloors floors
+			myOrders.Inside = append(myOrders.Inside, false)
+			myOrders.Up = append(myOrders.Up, false)
+			myOrders.Down = append(myOrders.Down, false)
+		}
+		elevTemp.Orders = myOrders
+	}else{
+	json.Unmarshal(elevStatusContent, elevPt)
 	}
-	if elevPt.Orders.Up == nil{
-		elevPt.Orders.Down = []bool{false, false, false, false}
-	}
-	elevCH <- elevTemp
 
-	/*
-	ordersTemp := elevhandler.Orders{Inside:	[]bool{false, false, false, false},
-									 Up:		[]bool{false, false, false, false},
-									 Down:		[]bool{false, false, false, false}} //FIX
-	fmt.Println("Boot")
-	*/
+	elevMap[myID] = elevTemp
+	elevCH <- elevTemp
 }
 
 

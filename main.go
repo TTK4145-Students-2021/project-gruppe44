@@ -36,9 +36,9 @@ import (
 */
 
 func main() {
-	numFloors := 4
-	//addr := "localhost:15657"
-
+	//numFloors := 4
+	var numFloors int 
+	flag.IntVar(&numFloors, "numFloors", 4, "Number of floors to the elevator")
 	// choose addr by '-addr=my_address'
 	var addr string
 	flag.StringVar(&addr, "addr", "localhost:15657", "Address of elevator server")
@@ -71,7 +71,7 @@ func main() {
 	orderResend 	:= make(chan elevio.ButtonEvent)
 	discon 			:= make(chan []string)
 
-	go func() { //temp for å tømme ubrukte channels
+	go func() { 
 		for {
 			select {
 			case o := <-orderResend:
@@ -81,7 +81,7 @@ func main() {
 		}
 	}()
 
-	go Orderhandler.OrderHandlerFSM(id, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon, timeOutToElev)
+	go Orderhandler.OrderHandlerFSM(id, numFloors, orderFromNet, elevFromNet, orderFromHandler, orderResend, elevInit, discon, timeOutToElev)
 	go Network.Network(id, orderFromNet, orderFromElev, elevFromFSM, elevFromNet, discon)
 	Elevator.ElevatorFSM(id, addr, numFloors, orderFromHandler, orderFromElev, elevFromFSM, orderRemove, elevInit, timeOutToElev)
 }

@@ -18,7 +18,6 @@ func ElevatorFSM(id string,
 				 orderRemove <-chan elevio.ButtonEvent,
 				 elevInit <-chan elevhandler.ElevatorStatus,
 				 timeOutToElev <-chan bool){
-				//  timeout <-chan bool) { // uimplementert
 
 	// "localhost:15657"
 	// numFloors := 4
@@ -42,7 +41,7 @@ func ElevatorFSM(id string,
 	myElevator := elevhandler.ElevatorStatus{Endstation: 0,
 											 Orders:	 myOrders,
 											 Floor:		 0,
-											 Available:true,
+											 Available:  true,
 											 Direction:	 elevio.MD_Stop}
 	elevPt := &myElevator
 
@@ -50,7 +49,7 @@ func ElevatorFSM(id string,
 
 	/*
 	ordersCH := make(chan elevhandler.Orders)
-	go func() { //temp, skal få allOrders liste fra handler/network FIX
+	go func() { //temp, skal få hallOrders liste fra handler/network FIX
 		for {
 			time.Sleep(100 * time.Millisecond)
 			ordersCH <- elevPt.Orders

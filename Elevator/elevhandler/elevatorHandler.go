@@ -9,10 +9,9 @@ import (
 
 var numFloors int = 4
 
-
 type ElevatorState int
 const (
-	ST_Idle   ElevatorState 	= 0
+	ST_Idle		ElevatorState 	= 0
 	ST_MovingUp             	= 1
 	ST_MovingDown           	= 2
 	ST_StopUp					= 3

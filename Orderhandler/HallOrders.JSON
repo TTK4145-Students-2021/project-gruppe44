@@ -9,44 +9,44 @@
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-21T08:18:32.8889647+02:00"
+			"TimeStarted": "2021-04-21T09:01:54.4797754+02:00"
 		},
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-21T08:18:33.0016616+02:00"
+			"TimeStarted": "2021-04-21T09:01:54.5897973+02:00"
 		},
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-21T08:18:33.0904267+02:00"
+			"TimeStarted": "2021-04-21T09:01:54.7436188+02:00"
 		},
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-21T07:53:12.2901379+02:00"
+			"TimeStarted": "0001-01-01T00:00:00Z"
 		}
 	],
 	"Down": [
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-21T07:53:12.2821598+02:00"
+			"TimeStarted": "0001-01-01T00:00:00Z"
 		},
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-21T08:18:33.9117511+02:00"
+			"TimeStarted": "2021-04-21T09:01:54.6117466+02:00"
 		},
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-21T08:18:33.9787055+02:00"
+			"TimeStarted": "2021-04-21T09:01:54.7878795+02:00"
 		},
 		{
 			"ID": "",
 			"Confirmed": false,
-			"TimeStarted": "2021-04-21T08:19:21.3572212+02:00"
+			"TimeStarted": "0001-01-01T00:00:00Z"
 		}
 	]
 }

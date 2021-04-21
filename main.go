@@ -48,8 +48,6 @@ func main() {
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
 	
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the process ID)
 	if id == "" {
 		localIP, err := localip.LocalIP()
 		if err != nil {
@@ -67,11 +65,11 @@ func main() {
 	orderFromHandler:= make(chan elevio.ButtonEvent)
 	orderFromNet	:= make(chan elevio.ButtonEvent)
 	orderRemove 	:= make(chan elevio.ButtonEvent)
-	timeOutToElev 	:= make(chan bool)
 	orderResend 	:= make(chan elevio.ButtonEvent)
+	timeOutToElev 	:= make(chan bool)
 	discon 			:= make(chan []string)
 
-	go func() { //temp for å tømme ubrukte channels
+	go func() {
 		for {
 			select {
 			case o := <-orderResend:

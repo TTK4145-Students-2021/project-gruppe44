@@ -88,13 +88,19 @@ func DistanceBetweenFloors(floor1, floor2 int) int {
 }
 
 
-func timeoutCheck(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *AllOrders, myID string, timeout chan<- string){
-	timeLimit := 20 * time.Second //FIX random number
+func TimeoutCheck(elevMap map[string]elevhandler.ElevatorStatus,
+				  ordersPt *HallOrders,
+				  myID string,
+				  timeout chan<- string){
+	
+	timeLimit := 20 * time.Second
 
 	for{
-		time.Sleep(time.Second) //FIX random number
+		time.Sleep(time.Second)
 		for f := 0; f < len(ordersPt.Down); f++{
+			
 			myElev := elevMap[myID]
+			
 			if myElev.Orders.Inside[f]{
 				if time.Now().After(myElev.TimeSinceNewFloor.Add(timeLimit)){
 					timeout <- myID
@@ -110,6 +116,7 @@ func timeoutCheck(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *AllOr
 					timeout <- ordersPt.Down[f].ID
 				}
 			}
+			
 			if (ordersPt.Up[f].ID != "") && time.Now().After(ordersPt.Up[f].TimeStarted.Add(timeLimit)){
 				if elev, ok := elevMap[ordersPt.Up[f].ID]; ok{
 					if time.Now().After(elev.TimeSinceNewFloor.Add(timeLimit)){
@@ -135,18 +142,19 @@ func timeoutCheck(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *AllOr
 }
 
 func OnTimeout(elevMap map[string]elevhandler.ElevatorStatus,
-			   ordersPt *AllOrders,
+			   ordersPt *HallOrders,
 			   myID string,
 			   timedOut string,
 			   timeoutElev chan<- bool,
 			   orderResend chan<- elevio.ButtonEvent) {
+	
 	fmt.Println("in timeout")
+	
 	if timedOut == myID{
 		timeoutElev <- false
 	}
-	OnDisconnect(elevMap, ordersPt, []string{timedOut}, orderResend)
-
 	
+	OnDisconnect(elevMap, ordersPt, []string{timedOut}, orderResend)
 
 	/*
 	for i :=0; i < len(disconnected); i++{
@@ -170,13 +178,13 @@ func OnTimeout(elevMap map[string]elevhandler.ElevatorStatus,
 // When the order list is altered we will save the orders to file,
 // this way we always have an updated order list in case of a crash.
 // This module will have the needed functions to save the elevator status and order list.
-func FileHandler(hall AllOrders, elev elevhandler.ElevatorStatus){
+func FileHandler(hall HallOrders, elev elevhandler.ElevatorStatus){
 
-		allOrdersFile,_ := os.Create("Orderhandler/AllOrders.JSON")
-		allOrdersJSONcontent,_ :=json.MarshalIndent(hall,"","\t")
-		writeAllOrdersToJSON := bufio.NewWriter(allOrdersFile)
-		writeAllOrdersToJSON.Write(allOrdersJSONcontent)
-		writeAllOrdersToJSON.Flush()
+		hallOrdersFile,_ := os.Create("Orderhandler/HallOrders.JSON")
+		hallOrdersJSONcontent,_ :=json.MarshalIndent(hall,"","\t")
+		writeHallOrdersToJSON := bufio.NewWriter(hallOrdersFile)
+		writeHallOrdersToJSON.Write(hallOrdersJSONcontent)
+		writeHallOrdersToJSON.Flush()
 		
 		// -------------------------------------------- //
 
@@ -195,8 +203,7 @@ type Order struct {
 	TimeStarted	time.Time	// Used for timeout flag
 }
 
-type AllOrders struct {
-	Inside []bool	/** < The inside panel orders*/ //we ignore inside orders as this is handled directly by the elevator
+type HallOrders struct {
 	Up     []Order	/** < The upwards orders from outside */
 	Down   []Order	/** < The downwards orders from outside */
 }
@@ -212,31 +219,19 @@ func OrderHandlerFSM(myID string,
 					 elevInit chan<- elevhandler.ElevatorStatus,
 					 disconCH <-chan []string,
 					 timeOutToElev chan<- bool){
-	// Inputs:
-	// NewOrder ButtonEvent: This is a new order that should be handled.
-	// FinishedOrder ButtonEvent: This is a finished order that should be cleared.
-	// confirmedOrder ButtonEvent: This is and order to be confirmed
-	// Elevator struct: Includes ElevatorStatus and ElevatorID. This is used to evaluate the cost of an order on each elevator.
-	// IsConnected struct: Contains a Connected bool that says if the elevator is connected and ElevatorID.
-	
-	// Outputs:
-	// Orders struct: A list of all orders, so that the elevator can turn on/off lights.
-	// NewOrder ButtonEvent: The new order, sendt to the elevator who is going to take the order.
 	
 	o 		  := Order{ID: "", Confirmed: false}
-	AllOrders := AllOrders{	Inside: []bool{false,false,false,false},
-								Up:		[]Order{o, o, o, o},
+	hallOrders := HallOrders{	Up:		[]Order{o, o, o, o},
 								Down:	[]Order{o, o, o, o}} //FIX: initialize in init, remove set order count
 	
-	ordersPt := &AllOrders
+	ordersPt := &hallOrders
 	elevMap  =  make(map[string]elevhandler.ElevatorStatus)
-	// elevCH := make(chan elevhandler.ElevatorStatus)
 	Init(myID, ordersPt, elevMap, elevInit)
 	//go updateOrderLights(ordersPt) FIX
 	elevTimedOut := make(chan string)
-	go timeoutCheck(elevMap, ordersPt, myID, elevTimedOut) 
+	go TimeoutCheck(elevMap, ordersPt, myID, elevTimedOut) 
+	
 	for {
-		// ordersTemp := *ordersPt
 		select {
 		case t := <-elevTimedOut:
 			OnTimeout(elevMap, ordersPt, myID, t, timeOutToElev, orderResend)
@@ -247,27 +242,30 @@ func OrderHandlerFSM(myID string,
 		case d := <-disconCH:
 			OnDisconnect(elevMap, ordersPt, d, orderResend)
 		}
-		// if !reflect.DeepEqual(ordersTemp, *ordersPt) {
-			hallTemp := *ordersPt
-			elevTemp := elevMap[myID]
-			FileHandler(hallTemp, elevTemp)
-		// }
+
+		hallTemp := *ordersPt
+		elevTemp := elevMap[myID]
+		FileHandler(hallTemp, elevTemp)
 	}
 }
 	
 // When the program turns on, it will load all local data from file.
 // If there is nothing to load it will initialize with zero orders.
-func Init(myID string, ordersPt *AllOrders, elevMap map[string]elevhandler.ElevatorStatus, elevCH chan<- elevhandler.ElevatorStatus){// myOrders chan<- elevhandler.Orders) {
+func Init(myID string,
+		  ordersPt *HallOrders,
+		  elevMap map[string]elevhandler.ElevatorStatus,
+		  elevCH chan<- elevhandler.ElevatorStatus){// myOrders chan<- elevhandler.Orders) {
+	
 	// Load from JSON files and send values out of Filehandler as channels
-	fmt.Println("in orderhandler init")
+	fmt.Println("In orderhandler init")
 	var elevTemp elevhandler.ElevatorStatus
 	elevPt := &elevTemp
 	
-	allOrdersContent,_ := ioutil.ReadFile("Orderhandler/AllOrders.JSON")
-	json.Unmarshal(allOrdersContent, ordersPt)
+	hallOrdersContent,_ := ioutil.ReadFile("Orderhandler/HallOrders.JSON")
+	json.Unmarshal(hallOrdersContent, ordersPt)
 	elevStatusContent,_ := ioutil.ReadFile("Orderhandler/ElevatorStatus.JSON")
 	json.Unmarshal(elevStatusContent, elevPt)
-	
+
 	elevMap[myID] = elevTemp
 	if elevPt.Orders.Inside == nil{ //FIX
 		elevPt.Orders.Inside = []bool{false, false, false, false}
@@ -290,7 +288,7 @@ func Init(myID string, ordersPt *AllOrders, elevMap map[string]elevhandler.Eleva
 
 
 func OnDisconnect(elevMap map[string]elevhandler.ElevatorStatus,
-				  ordersPt *AllOrders,
+				  ordersPt *HallOrders,
 				  disconnected []string,
 				  orderResend chan<- elevio.ButtonEvent) {
 
@@ -318,18 +316,19 @@ func OnDisconnect(elevMap map[string]elevhandler.ElevatorStatus,
 // The elevator who got the order will send the specific order and an order confirmation as well.
 // Elevators that are not connected will not be taken into consideration.
 func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
-					ordersPt *AllOrders,
+					ordersPt *HallOrders,
 					myID string,
 					order elevio.ButtonEvent,
 					orderOut chan<- elevio.ButtonEvent) {
 	
 	//TODO: save to file
 	fmt.Println("Got order request")
-	minCost := 1000000000000000000 //Big number so that the first cost is lower, couldn't use math.Inf(1) because of different types. Fix this
+	minCost := 1000000000000000000
 	
 	//var chosenElev string
 	chosenElev := myID
-	//sorted ids to make sure every elevator chooses the same elev when cost is the same.
+
+	// Sorted ids to make sure every elevator chooses the same elev when cost is the same.
 	ids := make([]string, 0, len(elevMap))
 	for id := range elevMap {
 		ids = append(ids, id)
@@ -345,7 +344,7 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 			chosenElev = id
 		}
 	}
-	//add order to list
+	// Add order to list
 	switch order.Button {
 	case elevio.BT_HallUp:
 		ordersPt.Up[order.Floor].ID = chosenElev
@@ -361,12 +360,10 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	} else {
 		fmt.Println("Didn't take order")
 	}
-	//fmt.Print("Current order list: ")
-	//fmt.Println(*ordersPt)
 }
 
 // When an order confirmation is recieved, this function will set that order as confirmed.
-func ConfirmOrder(ordersPt *AllOrders, id string, order elevio.ButtonEvent) {
+func ConfirmOrder(ordersPt *HallOrders, id string, order elevio.ButtonEvent) {
 	switch order.Button {
 	case elevio.BT_HallUp:
 		if ordersPt.Up[order.Floor].ID == id { //unødvending if statement nå, legacy code FIX
@@ -384,7 +381,7 @@ func ConfirmOrder(ordersPt *AllOrders, id string, order elevio.ButtonEvent) {
 }
 
 // When an order times out, this function will resend that order to the network module as a new order.
-func ResendOrder(ordersPt *AllOrders, order elevio.ButtonEvent, orderResend chan<- elevio.ButtonEvent) {
+func ResendOrder(ordersPt *HallOrders, order elevio.ButtonEvent, orderResend chan<- elevio.ButtonEvent) {
 	ClearOrder(ordersPt, order) //does it need to clear? FIX
 	orderResend<-order
 	fmt.Println("Resent order")
@@ -394,7 +391,7 @@ func ResendOrder(ordersPt *AllOrders, order elevio.ButtonEvent, orderResend chan
 // this function will save this as local data for the CostFunction() to use.
 // And if this elevator has an order that is not in the OrdersAll list, it will add this order.
 func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
-					 ordersPt *AllOrders,
+					 ordersPt *HallOrders,
 					 elev elevhandler.Elevator,
 					 orderResend chan<- elevio.ButtonEvent) { 
 
@@ -458,17 +455,17 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 }
 
 /*
-func updateHallLights(AllOrders AllOrders) {
+func updateHallLights(allOrders HallOrders) {
 	for f := 0; f < len(o.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
 		//elevio.SetButtonLamp(elevio.BT_Cab, f, cabOrders[f])
-		elevio.SetButtonLamp(elevio.BT_HallUp, f, AllOrders.Up[f].Confirmed)
-		elevio.SetButtonLamp(elevio.BT_HallDown, f, AllOrders.Down[f].Confirmed)
+		elevio.SetButtonLamp(elevio.BT_HallUp, f, hallOrders.Up[f].Confirmed)
+		elevio.SetButtonLamp(elevio.BT_HallDown, f, hallOrders.Down[f].Confirmed)
 	}
 }
 */
 
 // When an old order is finished, this function will clear/update the order table.
-func ClearOrder(ordersPt *AllOrders, order elevio.ButtonEvent) {
+func ClearOrder(ordersPt *HallOrders, order elevio.ButtonEvent) {
 	//TODO: save order list to file
 	elevio.SetButtonLamp(order.Button, order.Floor, false)
 	switch order.Button {
@@ -480,6 +477,4 @@ func ClearOrder(ordersPt *AllOrders, order elevio.ButtonEvent) {
 		ordersPt.Down[order.Floor].Confirmed = false
 	}
 	fmt.Println("Cleared order")
-	//fmt.Print("Current order list: ")
-	//fmt.Println(*ordersPt)
 }

@@ -13,6 +13,7 @@ func InitializeElevator(addr string,
 						floorCH <-chan int,
 						elevPt *elevhandler.ElevatorStatus,
 						elev <-chan elevhandler.ElevatorStatus) {
+	
 	*elevPt = <- elev
 	fmt.Println(*elevPt)
 
@@ -25,8 +26,8 @@ func InitializeElevator(addr string,
 	elevio.SetDoorOpenLamp(false)
 	elevio.SetStopLamp(false)
 	elevio.SetFloorIndicator(0)
-
 	elevio.SetMotorDirection(elevio.MD_Down)
+	
 	select {
 	case f := <-floorCH:
 		elevPt.Floor = f
@@ -35,6 +36,7 @@ func InitializeElevator(addr string,
 	elevhandler.SetEndstation(elevPt)
 	elevPt.Available		 = true
 	elevPt.TimeSinceNewFloor = time.Now()
+	
 	switch {
 	case elevPt.Endstation < elevPt.Floor:
 		elevio.SetMotorDirection(elevio.MD_Down)

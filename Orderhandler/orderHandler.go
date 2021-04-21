@@ -14,7 +14,7 @@ import (
 	"../Elevator/elevio"
 )
 
-// Prioritize elevators alredy moving
+// Prioritize elevators already moving
 func CostFunction(orderReq elevio.ButtonEvent, elevStatus elevhandler.ElevatorStatus) int {
 	distToRequest				:= DistanceBetweenFloors(elevStatus.Floor, orderReq.Floor)
 	distToEndstation			:= DistanceBetweenFloors(elevStatus.Floor, elevStatus.Endstation)
@@ -146,7 +146,7 @@ func OnTimeout(elevMap map[string]elevhandler.ElevatorStatus,
 func SaveToFile(hall HallOrders, elev elevhandler.ElevatorStatus){
 
 		hallOrdersFile,_		:= os.Create("Orderhandler/HallOrders.JSON")
-		hallOrdersJSONcontent,_	:=json.MarshalIndent(hall,"","\t")
+		hallOrdersJSONcontent,_	:= json.MarshalIndent(hall,"","\t")
 		writeHallOrdersToJSON	:= bufio.NewWriter(hallOrdersFile)
 		
 		writeHallOrdersToJSON.Write(hallOrdersJSONcontent)
@@ -155,7 +155,7 @@ func SaveToFile(hall HallOrders, elev elevhandler.ElevatorStatus){
 		// -------------------------------------------- //
 
 		elevatorFile,_			  := os.Create("Orderhandler/ElevatorStatus.JSON")
-		elevatorJSONcontent,_	  :=json.MarshalIndent(elev,"","\t")
+		elevatorJSONcontent,_	  := json.MarshalIndent(elev,"","\t")
 		writeElevatorStatusToJSON := bufio.NewWriter(elevatorFile)
 		
 		writeElevatorStatusToJSON.Write(elevatorJSONcontent)
@@ -175,8 +175,6 @@ type HallOrders struct {
 	Up	 []Order	// The upwards orders from outside
 	Down []Order	// The downwards orders from outside
 }
-
-// var elevMap map[string]elevhandler.ElevatorStatus // Map to store all the elevator statuses
 
 // OHFSM will receive and keep track of all orders and use a cost function to decide which elevator should take which order.
 func OrderHandlerFSM(myID string,
@@ -235,7 +233,8 @@ func LoadFromFile(myID string,
 		o := Order{ID: "", Confirmed: false}
 		var hallOrders HallOrders
 		
-		for i := 0; i < numFloors; i++{ // Create blank orders struct with numFloors floors
+		// Create blank orders struct with numFloors floors
+		for i := 0; i < numFloors; i++{
 			hallOrders.Up	= append(hallOrders.Up, o)
 			hallOrders.Down	= append(hallOrders.Down, o)
 		}
@@ -247,7 +246,9 @@ func LoadFromFile(myID string,
 	elevStatusContent, err := ioutil.ReadFile("Orderhandler/ElevatorStatus.JSON")
 	if err != nil{
 		var myOrders elevhandler.Orders
-		for i := 0; i < numFloors; i++{ // Create blank orders struct with numFloors floors
+
+		// Create blank orders struct with numFloors floors
+		for i := 0; i < numFloors; i++{
 			myOrders.Inside	= append(myOrders.Inside, false)
 			myOrders.Up		= append(myOrders.Up, false)
 			myOrders.Down	= append(myOrders.Down, false)
@@ -285,12 +286,6 @@ func OnDisconnect(elevMap map[string]elevhandler.ElevatorStatus,
 	}					
 }
 
-// When OrderHandler receives a new order,
-// this function will choose which elevator gets the order by calculating the CostFunction() on each elevator.
-// It then updates its local data, OrdersAll.
-// These orders are sent out for the elevator to update it’s lights.
-// The elevator who got the order will send the specific order and an order confirmation as well.
-// Elevators that are not connected will not be taken into consideration.
 func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 					ordersPt *HallOrders,
 					myID string,
@@ -299,8 +294,8 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	
 	fmt.Println("Got order request")
 	
-	minCost		:= 1000000000000000000
-	chosenElev	:= myID
+	minCost	   := 1000000000000000000
+	chosenElev := myID
 
 	// Sorted ids to make sure every elevator chooses the same elev when cost is the same.
 	ids := make([]string, 0, len(elevMap))
@@ -322,7 +317,7 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 		}
 	}
 
-	// Add order to list
+	// Add order to order list
 	switch order.Button {
 	case elevio.BT_HallUp:
 		ordersPt.Up[order.Floor].ID			 = chosenElev
@@ -378,21 +373,26 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 	for f := 0; f < len(ordersPt.Down); f++ {
 		// Down orders
 		switch {
-		case (elev.ID == ordersPt.Down[f].ID) && ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: // Confirmed, not taken -> order is finished
+		
+		// Confirmed, not taken -> order is finished
+		case (elev.ID == ordersPt.Down[f].ID) && ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]:
 			ClearOrder(ordersPt, elevio.ButtonEvent{Button: elevio.BT_HallDown, Floor: f})
 
-		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && elev.Status.Orders.Down[f]: // Not confirmed and taken -> confirm order
+		// Not confirmed and taken -> confirm order
+		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && elev.Status.Orders.Down[f]:
 			ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallDown, Floor: f})
 
-		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]: // Not confirmed, not taken -> resend if timed out?
+		// Not confirmed, not taken -> resend if timed out
+		case (elev.ID == ordersPt.Down[f].ID) && !ordersPt.Down[f].Confirmed && !elev.Status.Orders.Down[f]:
 			fmt.Println("Should resend order")
 			threshold := time.Millisecond * 250 // Time given to confirm order
 			if time.Now().After(ordersPt.Down[f].TimeStarted.Add(threshold)){
 				o := elevio.ButtonEvent{ Floor: f, Button: elevio.BT_HallDown}
 				ResendOrder(ordersPt ,o, orderResend)
 			}
-
-		case (elev.ID != ordersPt.Down[f].ID) && elev.Status.Orders.Down[f]: // Order taken, but not in list
+		
+		// Order taken, but not in list
+		case (elev.ID != ordersPt.Down[f].ID) && elev.Status.Orders.Down[f]:
 			if ordersPt.Down[f].ID == "" {
 				fmt.Println("Order taken without me knowing")
 				ordersPt.Down[f].ID = elev.ID
@@ -406,13 +406,17 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 
 		// Up orders
 		switch {
-		case (elev.ID == ordersPt.Up[f].ID) && ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]: // Confirmed, not taken -> order is finished
-			ClearOrder(ordersPt, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
 
-		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && elev.Status.Orders.Up[f]: // Not confirmed and taken -> confirm order
+		// Confirmed, not taken -> order is finished
+		case (elev.ID == ordersPt.Up[f].ID) && ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]:
+			ClearOrder(ordersPt, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
+		
+		// Not confirmed and taken -> confirm order
+		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && elev.Status.Orders.Up[f]:
 			ConfirmOrder(ordersPt, elev.ID, elevio.ButtonEvent{Button: elevio.BT_HallUp, Floor: f})
 
-		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]: // Not confirmed, not taken -> resend if timed out?
+		// Not confirmed, not taken -> resend if timed out
+		case (elev.ID == ordersPt.Up[f].ID) && !ordersPt.Up[f].Confirmed && !elev.Status.Orders.Up[f]:
 			fmt.Println("Should resend order")
 			threshold := time.Millisecond * 250 // Time before resend order
 			if time.Now().After(ordersPt.Up[f].TimeStarted.Add(threshold)){
@@ -420,7 +424,8 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 				ResendOrder(ordersPt ,o, orderResend)
 			}
 
-		case (elev.ID != ordersPt.Up[f].ID) && elev.Status.Orders.Up[f]: // Order taken, but not in list
+		// Order taken, but not in list
+		case (elev.ID != ordersPt.Up[f].ID) && elev.Status.Orders.Up[f]:
 			if ordersPt.Up[f].ID == "" {
 				fmt.Println("Order taken without me knowing")
 				ordersPt.Up[f].ID = elev.ID
@@ -433,16 +438,6 @@ func UpdateElevators(elevMap map[string]elevhandler.ElevatorStatus,
 		}
 	}
 }
-
-/*
-func updateHallLights(allOrders HallOrders) {
-	for f := 0; f < len(o.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
-		//elevio.SetButtonLamp(elevio.BT_Cab, f, cabOrders[f])
-		elevio.SetButtonLamp(elevio.BT_HallUp, f, hallOrders.Up[f].Confirmed)
-		elevio.SetButtonLamp(elevio.BT_HallDown, f, hallOrders.Down[f].Confirmed)
-	}
-}
-*/
 
 // When an old order is finished, this function will clear/update the order table.
 func ClearOrder(ordersPt *HallOrders, order elevio.ButtonEvent) {

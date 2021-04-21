@@ -36,7 +36,8 @@ func ElevatorFSM(id string,
 
 	elevinit.InitializeElevator(addr, numFloors, drv_floors, elevPt, elevInit)
 	
-	go func() { // Only send hall orders to network
+	// Only send hall orders to network
+	go func() {
 		for {
 			o := <-drv_btn
 			if o.Button == elevio.BT_Cab {
@@ -47,15 +48,18 @@ func ElevatorFSM(id string,
 		}
 	}()
 
-	go func() { // Send elevator status to network
+	// Send elevator status to network
+	go func() {
 		sendRate := 50 * time.Millisecond
 		for {
 			elevCH <- elevhandler.Elevator{ID: id, Status: *elevPt}
 			time.Sleep(sendRate)
 		}
 	}()
+
 	doorOpen	:= make(chan bool)
 	doorTimeout := make(chan bool)
+	
 	for {
 		select {
 		case <- doorOpen:
@@ -95,7 +99,7 @@ func onNewOrder(elevPt *elevhandler.ElevatorStatus, order elevio.ButtonEvent){
 			elevPt.State	 = elevhandler.ST_MovingUp
 			fmt.Println("State: MovingUp")
 		
-			case elevPt.Endstation == elevPt.Floor: //fyll ut ifs pga emergency stop
+			case elevPt.Endstation == elevPt.Floor:
 			if elevPt.Orders.Inside[elevPt.Floor] || elevPt.Orders.Down[elevPt.Floor] {
 				elevPt.Direction = elevio.MD_Down
 				elevPt.State	 = elevhandler.ST_StopDown
@@ -124,7 +128,6 @@ func onFloorSensor(elevPt *elevhandler.ElevatorStatus, floor int){
 	elevio.SetFloorIndicator(floor)
 	switch elevPt.State {
 	case elevhandler.ST_MovingUp:
-		//fmt.Println("Up order check, floor: ", f)
 		if elevPt.Orders.Up[floor] || elevPt.Orders.Inside[floor] || elevPt.Endstation <= floor {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevPt.Direction = elevio.MD_Up
@@ -132,7 +135,6 @@ func onFloorSensor(elevPt *elevhandler.ElevatorStatus, floor int){
 			fmt.Println("State: StopUp")
 		}
 	case elevhandler.ST_MovingDown:
-		//fmt.Println("Down order check, floor: ", elevPt.Floor)
 		if elevPt.Orders.Down[floor] || elevPt.Orders.Inside[floor] || elevPt.Endstation >= floor {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevPt.Direction = elevio.MD_Down
@@ -218,18 +220,3 @@ func onTimeout(elevPt *elevhandler.ElevatorStatus){
 		}
 	}
 }
-
-/*
-func updateOrderLights(orders <-chan elevhandler.Orders) { // usikker på om denne skal være her FIX
-	for {
-		select {
-		case o := <-orders:
-			for f := 0; f < len(o.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
-				elevio.SetButtonLamp(elevio.BT_Cab, f, o.Inside[f])
-				elevio.SetButtonLamp(elevio.BT_HallUp, f, o.Up[f])
-				elevio.SetButtonLamp(elevio.BT_HallDown, f, o.Down[f])
-			}
-		}
-	}
-}
-*/

@@ -14,27 +14,6 @@ import (
 	"./reboot"
 )
 
-/*
-	TODO:
-		Remove magic numbers like NumFloors in struct inits
-		Remove unnessecary comments in main and other files
-		OrderHandler:
-			Filehandling:
-			- Must receive networkdisconnet from somewhere
-			OnTimeout:
-			- Integrate with rest of code
-			Send orderlights to elevatorFSM
-			Init:
-			- Add check to see if file is empty
-			FIX lights
-		Elevator:
-			Refactoring (remove uneccesary while loops)
-			Emergency stop
-		FIX README files and similar stuff that we need/dont need
-
-		TIPS: ctrl+f: type in FIX
-*/
-
 func main() {
 	
 	var numFloors int 

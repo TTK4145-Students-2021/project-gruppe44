@@ -7,7 +7,6 @@ import (
 	"../elevio"
 )
 
-
 type ElevatorState int
 const (
 	ST_Idle		ElevatorState = 0
@@ -78,7 +77,8 @@ func SetEndstation(elevPt *ElevatorStatus) {
 				elevPt.Endstation = f
 			}
 		}
-	case elevio.MD_Up, elevio.MD_Stop: // Bias til å gå oppover
+	// Bias up
+	case elevio.MD_Up, elevio.MD_Stop: 
 		for f := 0; f < len(elevPt.Orders.Inside); f++ {
 			if elevPt.Orders.Inside[f] || elevPt.Orders.Down[f] || elevPt.Orders.Up[f] {
 				elevPt.Endstation = f

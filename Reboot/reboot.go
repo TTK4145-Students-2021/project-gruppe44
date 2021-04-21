@@ -38,7 +38,7 @@ func backupPhase() int {
 func primaryPhase(count int, addr string, id string) {
 	fmt.Println("--- Primary phase ---")
 	fmt.Println("... creating new backup")
-	err := exec.Command("cmd", "/C", "start", "powershell", "go", "run", "main.go", "-addr="+addr, "-id="+id).Run()
+	err := exec.Command("gnome-terminal", "-x","go", "run", "main.go", "-addr="+addr, "-id="+id).Run()
 	if err != nil {
 		fmt.Println(err)
 	}

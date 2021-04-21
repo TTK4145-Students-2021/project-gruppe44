@@ -17,7 +17,7 @@ const (
 	ST_MovingDown           	= 2
 	ST_StopUp					= 3
 	ST_StopDown 				= 4
-	ST_TimedOut 				= 5
+	ST_DoorOpen 				= 5
 )
 
 type Orders struct {
@@ -29,9 +29,8 @@ type Orders struct {
 type ElevatorStatus struct {
 	Endstation  			int
 	Floor       			int
-	Available				bool //
-	//Timeout     			bool
-	//IsConnected 			bool
+	Available				bool 
+	//DoorOpen 				bool
 	Orders      			Orders
 	TimeSinceNewFloor	 	time.Time
 	Direction   			elevio.MotorDirection

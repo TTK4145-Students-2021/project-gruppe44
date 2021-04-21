@@ -1,6 +1,6 @@
 {
-	"Endstation": 0,
-	"Floor": 0,
+	"Endstation": 2,
+	"Floor": 2,
 	"Available": true,
 	"Orders": {
 		"Inside": [
@@ -22,7 +22,7 @@
 			false
 		]
 	},
-	"TimeSinceNewFloor": "2021-04-21T05:35:23.2182212+02:00",
+	"TimeSinceNewFloor": "2021-04-21T08:19:29.3666258+02:00",
 	"Direction": 0,
 	"State": 0
 }

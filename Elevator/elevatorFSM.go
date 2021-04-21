@@ -73,8 +73,8 @@ func ElevatorFSM(id string,
 	go func() { //send elevator status to network
 		sendRate := 50 * time.Millisecond
 		for {
-			time.Sleep(sendRate)
 			elevCH <- elevhandler.Elevator{ID: id, Status: *elevPt}
+			time.Sleep(sendRate)
 		}
 
 		/*
@@ -90,20 +90,23 @@ func ElevatorFSM(id string,
 			}
 		*/
 	}()
-	
+	doorOpen := make(chan bool)
 	doorTimeout := make(chan bool)
 	for {
 		select {
+		case <- doorOpen:
+			fmt.Println("State: DoorOpen")
+			elevPt.State = elevhandler.ST_DoorOpen
 		case <- timeOutToElev:
 			go onTimeout(elevPt)
 		case f := <- drv_floors:
 			onFloorSensor(elevPt, f)
-			go doorTimer(elevPt.State, drv_obstr, doorTimeout)
+			go doorTimer(elevPt.State, drv_obstr, doorTimeout, doorOpen)
 		case <-doorTimeout:
 			onDoorTimeout(elevPt)
 		case o := <-orderRecieved:
 			onNewOrder(elevPt, o)
-			go doorTimer(elevPt.State, drv_obstr, doorTimeout)
+			go doorTimer(elevPt.State, drv_obstr, doorTimeout, doorOpen)
 		case o := <-orderRemove:
 			onRemoveOrder(elevPt, o)
 		}
@@ -150,6 +153,14 @@ func onFloorSensor(elevPt *elevhandler.ElevatorStatus, floor int){
 	elevPt.Floor = floor
 	elevPt.TimeSinceNewFloor = time.Now()
 	elevPt.Available = true
+	/*
+	if !elevPt.Available {
+		elevPt.Available = true
+		elevio.SetMotorDirection(elevio.MD_Stop)
+		elevPt.Direction = elevio.MD_Stop
+		elevPt.State = elevhandler.ST_Idle
+	}
+	*/
 	elevio.SetFloorIndicator(floor)
 	switch elevPt.State {
 	case elevhandler.ST_MovingUp:
@@ -168,25 +179,28 @@ func onFloorSensor(elevPt *elevhandler.ElevatorStatus, floor int){
 			elevPt.State = elevhandler.ST_StopDown
 			fmt.Println("State: StopDown")
 		}
+	case elevhandler.ST_Idle:
+		elevio.SetMotorDirection(elevio.MD_Stop)
 	}
 }
 
-func doorTimer(elevState elevhandler.ElevatorState, obstr <-chan bool, finished chan<- bool){
-	elevio.SetDoorOpenLamp(true)
-	fmt.Println("onDoorTimer")
+func doorTimer(elevState elevhandler.ElevatorState, obstr <-chan bool, finished chan<- bool, doorOpen chan<- bool){
 	if (elevState == elevhandler.ST_StopUp) || (elevState == elevhandler.ST_StopDown){
-	timer := time.NewTimer(3 * time.Second)
-		for {
-			select{
-			case o := <-obstr:
-				if o {
-					timer.Stop()
-				} else {
-					timer = time.NewTimer(3 * time.Second)
-				}
-			case <-timer.C:
-				finished <- true
-				return
+		doorOpen <- true
+		elevio.SetDoorOpenLamp(true)
+		fmt.Println("onDoorTimer")
+		timer := time.NewTimer(3 * time.Second)
+			for {
+				select{
+				case o := <-obstr:
+					if o {
+						timer.Stop()
+					} else {
+						timer = time.NewTimer(3 * time.Second)
+					}
+				case <-timer.C:
+					finished <- true
+					return
 			}
 		}
 	}
@@ -222,17 +236,24 @@ func onDoorTimeout(elevPt *elevhandler.ElevatorStatus){
 func onTimeout(elevPt *elevhandler.ElevatorStatus){
 	fmt.Println("onTimeout")
 	elevPt.Available = false
+	//elevPt.State = elevhandler.ST_TimedOut
 	checkRate := 100*time.Millisecond
-	switch elevPt.State{
-	case elevhandler.ST_Idle, elevhandler.ST_MovingUp, elevhandler.ST_MovingDown:
-		for !elevPt.Available{
+	for !elevPt.Available{
+		time.Sleep(checkRate)
+		switch elevPt.State{
+		case elevhandler.ST_Idle:
 			if elevPt.Floor == 0 {
 				elevio.SetMotorDirection(elevio.MD_Up)
 			} else {
 				elevio.SetMotorDirection(elevio.MD_Down)
 			}
+		case elevhandler.ST_MovingUp:
+			elevio.SetMotorDirection(elevio.MD_Up)
 
-			time.Sleep(checkRate)
+		case elevhandler.ST_MovingDown:
+			elevio.SetMotorDirection(elevio.MD_Down)
+		case elevhandler.ST_StopDown, elevhandler.ST_StopUp:
+			return
 		}
 	}
 

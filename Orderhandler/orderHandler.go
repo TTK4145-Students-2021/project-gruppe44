@@ -231,7 +231,7 @@ func OrderHandlerFSM(myID string,
 	ordersPt := &AllOrders
 	elevMap  =  make(map[string]elevhandler.ElevatorStatus)
 	// elevCH := make(chan elevhandler.ElevatorStatus)
-	Init(myID, ordersPt, elevInit)
+	Init(myID, ordersPt, elevMap, elevInit)
 	//go updateOrderLights(ordersPt) FIX
 	elevTimedOut := make(chan string)
 	go timeoutCheck(elevMap, ordersPt, myID, elevTimedOut) 
@@ -257,7 +257,7 @@ func OrderHandlerFSM(myID string,
 	
 // When the program turns on, it will load all local data from file.
 // If there is nothing to load it will initialize with zero orders.
-func Init(myID string, ordersPt *AllOrders, elevCH chan<- elevhandler.ElevatorStatus){// myOrders chan<- elevhandler.Orders) {
+func Init(myID string, ordersPt *AllOrders, elevMap map[string]elevhandler.ElevatorStatus, elevCH chan<- elevhandler.ElevatorStatus){// myOrders chan<- elevhandler.Orders) {
 	// Load from JSON files and send values out of Filehandler as channels
 	fmt.Println("in orderhandler init")
 	var elevTemp elevhandler.ElevatorStatus
@@ -267,6 +267,8 @@ func Init(myID string, ordersPt *AllOrders, elevCH chan<- elevhandler.ElevatorSt
 	json.Unmarshal(allOrdersContent, ordersPt)
 	elevStatusContent,_ := ioutil.ReadFile("Orderhandler/ElevatorStatus.JSON")
 	json.Unmarshal(elevStatusContent, elevPt)
+	
+	elevMap[myID] = elevTemp
 	if elevPt.Orders.Inside == nil{ //FIX
 		elevPt.Orders.Inside = []bool{false, false, false, false}
 	} 

@@ -48,10 +48,21 @@ func InitializeElevator(addr string,
 		elevPt.Direction = elevio.MD_Up
 		elevPt.State	 = elevhandler.ST_MovingUp
 	
-	default:
+	case elevPt.Endstation == elevPt.Floor:
 		elevio.SetMotorDirection(elevio.MD_Stop)
+		if elevPt.Orders.Inside[elevPt.Floor] || elevPt.Orders.Down[elevPt.Floor] {
+			elevPt.Direction = elevio.MD_Down
+			elevPt.State	 = elevhandler.ST_StopDown
+			fmt.Println("State: StopDown")
+		} else if elevPt.Orders.Up[elevPt.Floor] {
+			elevPt.Direction = elevio.MD_Up
+			elevPt.State	 = elevhandler.ST_StopUp
+			fmt.Println("State: StopUp")
+		} else {
 		elevPt.Direction = elevio.MD_Stop
 		elevPt.State	 = elevhandler.ST_Idle
+
+		}
 	}
 	fmt.Print("Initializing complete\n")
 }

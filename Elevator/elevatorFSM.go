@@ -21,10 +21,10 @@ func ElevatorFSM(id string,
 
 	elevio.Init(addr, numFloors)
 
-	drv_floors	:= make(chan int)
-	drv_obstr	:= make(chan bool)
-	drv_stop	:= make(chan bool)
-	drv_btn		:= make(chan elevio.ButtonEvent)
+	drv_floors := make(chan int)
+	drv_obstr  := make(chan bool)
+	drv_stop   := make(chan bool)
+	drv_btn	   := make(chan elevio.ButtonEvent)
 
 	go elevio.PollButtons(drv_btn)
 	go elevio.PollFloorSensor(drv_floors)
@@ -54,7 +54,7 @@ func ElevatorFSM(id string,
 			time.Sleep(sendRate)
 		}
 	}()
-	doorOpen := make(chan bool)
+	doorOpen	:= make(chan bool)
 	doorTimeout := make(chan bool)
 	for {
 		select {
@@ -86,21 +86,23 @@ func onNewOrder(elevPt *elevhandler.ElevatorStatus, order elevio.ButtonEvent){
 		case elevPt.Endstation < elevPt.Floor:
 			elevio.SetMotorDirection(elevio.MD_Down)
 			elevPt.Direction = elevio.MD_Down
-			elevPt.State = elevhandler.ST_MovingDown
+			elevPt.State	 = elevhandler.ST_MovingDown
 			fmt.Println("State: MovingDown")
+		
 		case elevPt.Endstation > elevPt.Floor:
 			elevio.SetMotorDirection(elevio.MD_Up)
 			elevPt.Direction = elevio.MD_Up
-			elevPt.State = elevhandler.ST_MovingUp
+			elevPt.State	 = elevhandler.ST_MovingUp
 			fmt.Println("State: MovingUp")
-		case elevPt.Endstation == elevPt.Floor: //fyll ut ifs pga emergency stop
+		
+			case elevPt.Endstation == elevPt.Floor: //fyll ut ifs pga emergency stop
 			if elevPt.Orders.Inside[elevPt.Floor] || elevPt.Orders.Down[elevPt.Floor] {
 				elevPt.Direction = elevio.MD_Down
-				elevPt.State = elevhandler.ST_StopDown
+				elevPt.State	 = elevhandler.ST_StopDown
 				fmt.Println("State: StopDown")
 			} else if elevPt.Orders.Up[elevPt.Floor] {
 				elevPt.Direction = elevio.MD_Up
-				elevPt.State = elevhandler.ST_StopUp
+				elevPt.State	 = elevhandler.ST_StopUp
 				fmt.Println("State: StopUp")
 			}
 		}
@@ -114,9 +116,11 @@ func onRemoveOrder(elevPt *elevhandler.ElevatorStatus, order elevio.ButtonEvent)
 
 func onFloorSensor(elevPt *elevhandler.ElevatorStatus, floor int){
 	fmt.Println("onFloorSensor")
-	elevPt.Floor = floor
+	
+	elevPt.Floor			 = floor
 	elevPt.TimeSinceNewFloor = time.Now()
-	elevPt.Available = true
+	elevPt.Available		 = true
+	
 	elevio.SetFloorIndicator(floor)
 	switch elevPt.State {
 	case elevhandler.ST_MovingUp:
@@ -124,7 +128,7 @@ func onFloorSensor(elevPt *elevhandler.ElevatorStatus, floor int){
 		if elevPt.Orders.Up[floor] || elevPt.Orders.Inside[floor] || elevPt.Endstation <= floor {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevPt.Direction = elevio.MD_Up
-			elevPt.State = elevhandler.ST_StopUp
+			elevPt.State	 = elevhandler.ST_StopUp
 			fmt.Println("State: StopUp")
 		}
 	case elevhandler.ST_MovingDown:
@@ -132,7 +136,7 @@ func onFloorSensor(elevPt *elevhandler.ElevatorStatus, floor int){
 		if elevPt.Orders.Down[floor] || elevPt.Orders.Inside[floor] || elevPt.Endstation >= floor {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevPt.Direction = elevio.MD_Down
-			elevPt.State = elevhandler.ST_StopDown
+			elevPt.State	 = elevhandler.ST_StopDown
 			fmt.Println("State: StopDown")
 		}
 	case elevhandler.ST_Idle:
@@ -172,21 +176,21 @@ func onDoorTimeout(elevPt *elevhandler.ElevatorStatus){
 		fmt.Println("Endstation on floor")
 		elevio.SetMotorDirection(elevio.MD_Stop)
 		elevPt.Direction = elevio.MD_Stop
-		elevPt.State = elevhandler.ST_Idle
+		elevPt.State	 = elevhandler.ST_Idle
 		fmt.Println("State: Idle")
 
 	case elevPt.Endstation > elevPt.Floor:
 		fmt.Println("Endstation above floor")
  		elevio.SetMotorDirection(elevio.MD_Up)
 		elevPt.Direction = elevio.MD_Up
-		elevPt.State = elevhandler.ST_MovingUp
+		elevPt.State	 = elevhandler.ST_MovingUp
 		fmt.Println("State: MovingUp")
 
 	case elevPt.Endstation < elevPt.Floor:
 		fmt.Println("Endstation below floor")
 		elevio.SetMotorDirection(elevio.MD_Down)
 		elevPt.Direction = elevio.MD_Down
-		elevPt.State = elevhandler.ST_MovingDown
+		elevPt.State	 = elevhandler.ST_MovingDown
 		fmt.Println("State: MovingDown")
 	}
 }

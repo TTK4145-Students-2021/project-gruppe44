@@ -57,16 +57,16 @@ func main() {
 	}
 	reboot.Reboot(addr, id)
 
-	elevFromFSM		:= make(chan elevhandler.Elevator)
-	elevFromNet		:= make(chan elevhandler.Elevator)
-	elevInit		:= make(chan elevhandler.ElevatorStatus)
-	orderFromElev	:= make(chan elevio.ButtonEvent)
-	orderFromHandler:= make(chan elevio.ButtonEvent)
-	orderFromNet	:= make(chan elevio.ButtonEvent)
-	orderRemove 	:= make(chan elevio.ButtonEvent)
-	orderResend 	:= make(chan elevio.ButtonEvent)
-	timeOutToElev 	:= make(chan bool)
-	discon 			:= make(chan []string)
+	elevFromFSM		 := make(chan elevhandler.Elevator)
+	elevFromNet		 := make(chan elevhandler.Elevator)
+	elevInit		 := make(chan elevhandler.ElevatorStatus)
+	orderFromElev	 := make(chan elevio.ButtonEvent)
+	orderFromHandler := make(chan elevio.ButtonEvent)
+	orderFromNet	 := make(chan elevio.ButtonEvent)
+	orderRemove 	 := make(chan elevio.ButtonEvent)
+	orderResend 	 := make(chan elevio.ButtonEvent)
+	timeOutToElev 	 := make(chan bool)
+	discon 			 := make(chan []string)
 
 	go func() {
 		for {

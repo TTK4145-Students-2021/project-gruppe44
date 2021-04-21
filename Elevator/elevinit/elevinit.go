@@ -33,21 +33,23 @@ func InitializeElevator(addr string,
 		elevio.SetFloorIndicator(f)
 	}
 	elevhandler.SetEndstation(elevPt)
-	elevPt.Available = true
+	elevPt.Available		 = true
 	elevPt.TimeSinceNewFloor = time.Now()
 	switch {
 	case elevPt.Endstation < elevPt.Floor:
 		elevio.SetMotorDirection(elevio.MD_Down)
 		elevPt.Direction = elevio.MD_Down
-		elevPt.State = elevhandler.ST_MovingDown
+		elevPt.State	 = elevhandler.ST_MovingDown
+	
 	case elevPt.Endstation > elevPt.Floor:
 		elevio.SetMotorDirection(elevio.MD_Up)
 		elevPt.Direction = elevio.MD_Up
-		elevPt.State = elevhandler.ST_MovingUp
+		elevPt.State	 = elevhandler.ST_MovingUp
+	
 	default:
 		elevio.SetMotorDirection(elevio.MD_Stop)
 		elevPt.Direction = elevio.MD_Stop
-		elevPt.State = elevhandler.ST_Idle
+		elevPt.State	 = elevhandler.ST_Idle
 	}
 	fmt.Print("Initializing complete\n")
 }

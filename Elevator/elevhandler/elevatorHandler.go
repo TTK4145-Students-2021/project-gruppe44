@@ -10,12 +10,12 @@ import (
 
 type ElevatorState int
 const (
-	ST_Idle		ElevatorState 	= 0
-	ST_MovingUp             	= 1
-	ST_MovingDown           	= 2
-	ST_StopUp					= 3
-	ST_StopDown 				= 4
-	ST_DoorOpen 				= 5
+	ST_Idle		ElevatorState = 0
+	ST_MovingUp               = 1
+	ST_MovingDown             = 2
+	ST_StopUp				  = 3
+	ST_StopDown 			  = 4
+	ST_DoorOpen 			  = 5
 )
 
 type Orders struct {
@@ -25,13 +25,13 @@ type Orders struct {
 }
 
 type ElevatorStatus struct {
-	Endstation  			int
-	Floor       			int
-	Available				bool
-	Orders      			Orders
-	TimeSinceNewFloor	 	time.Time
-	Direction   			elevio.MotorDirection
-	State 					ElevatorState
+	Endstation  	  int
+	Floor       	  int
+	Available		  bool
+	Orders      	  Orders
+	TimeSinceNewFloor time.Time
+	Direction   	  elevio.MotorDirection
+	State 			  ElevatorState
 }
 
 type Elevator struct {
@@ -44,8 +44,10 @@ func AddOrder(elevPt *ElevatorStatus, order elevio.ButtonEvent) {
 	case elevio.BT_Cab:
 		elevPt.Orders.Inside[order.Floor] = true
 		elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, true)
+	
 	case elevio.BT_HallUp:
 		elevPt.Orders.Up[order.Floor] = true
+	
 	case elevio.BT_HallDown:
 		elevPt.Orders.Down[order.Floor] = true
 	}
@@ -57,8 +59,10 @@ func RemoveOrder(elevPt *ElevatorStatus, order elevio.ButtonEvent){
 	case elevio.BT_Cab:
 		elevPt.Orders.Inside[order.Floor] = false
 		elevio.SetButtonLamp(elevio.BT_Cab, order.Floor, false)
+	
 	case elevio.BT_HallUp:
 		elevPt.Orders.Up[order.Floor] = false
+	
 	case elevio.BT_HallDown:
 		elevPt.Orders.Down[order.Floor] = false
 	}

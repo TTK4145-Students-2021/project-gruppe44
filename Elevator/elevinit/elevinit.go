@@ -22,8 +22,11 @@ func InitializeElevator(addr string,
 		elevio.SetButtonLamp(elevio.BT_HallUp, f, elevPt.Orders.Up[f])
 		elevio.SetButtonLamp(elevio.BT_HallDown, f, elevPt.Orders.Down[f])
 	}
-
-	elevio.SetDoorOpenLamp(false)
+	if elevPt.State == elevhandler.ST_DoorOpen{
+		elevio.SetDoorOpenLamp(true)
+	} else{
+		elevio.SetDoorOpenLamp(false)
+	}
 	elevio.SetStopLamp(false)
 	elevio.SetFloorIndicator(0)
 	elevio.SetMotorDirection(elevio.MD_Down)

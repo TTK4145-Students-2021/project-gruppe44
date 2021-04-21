@@ -254,6 +254,7 @@ func LoadFromFile(myID string,
 			myOrders.Down	= append(myOrders.Down, false)
 		}
 		elevTemp.Orders = myOrders
+		elevTemp.State = elevhandler.ST_Idle
 	} else {
 		json.Unmarshal(elevStatusContent, elevPt)
 	}

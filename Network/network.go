@@ -28,8 +28,8 @@ func Network(id string,
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15647, id, peerTxEnable)
-	go peers.Receiver(15647, peerUpdateCh)
+	go peers.Transmitter(33322, id, peerTxEnable)
+	go peers.Receiver(33322, peerUpdateCh)
 
 	go bcast.Transmitter(33333, orderTx)
 	go bcast.Receiver(33333, orderRx)

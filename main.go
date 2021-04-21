@@ -67,7 +67,7 @@ func main() {
 	orderFromHandler:= make(chan elevio.ButtonEvent)
 	orderFromNet	:= make(chan elevio.ButtonEvent)
 	orderRemove 	:= make(chan elevio.ButtonEvent)
-	timeOutToElev := make(chan bool)
+	timeOutToElev 	:= make(chan bool)
 	orderResend 	:= make(chan elevio.ButtonEvent)
 	discon 			:= make(chan []string)
 

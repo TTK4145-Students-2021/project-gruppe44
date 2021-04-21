@@ -22,6 +22,7 @@
 			false
 		]
 	},
-	"TimeSinceClearedOrder": "2021-04-21T00:40:48.5431138+02:00",
-	"Direction": 0
+	"TimeSinceNewFloor": "2021-04-21T05:35:23.2182212+02:00",
+	"Direction": 0,
+	"State": 0
 }

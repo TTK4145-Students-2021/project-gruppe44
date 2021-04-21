@@ -8,26 +8,6 @@ import (
 	"../elevio"
 )
 
-func ClearAllOrderLights(numFloors int) {
-	for floor := 0; floor < numFloors; floor++ {
-		elevio.SetButtonLamp(elevio.BT_HallUp, floor, false)
-		elevio.SetButtonLamp(elevio.BT_Cab, floor, false)
-		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
-	}
-}
-
-func updateOrderLights(orders <-chan elevhandler.Orders) { // usikker på om denne skal være her FIX
-	for {
-		select {
-		case o := <-orders:
-			for f := 0; f < len(o.Inside); f++ { //var lat, gadd ikke å fikse at forskjellige order types har ferre ordre
-				elevio.SetButtonLamp(elevio.BT_Cab, f, o.Inside[f])
-				elevio.SetButtonLamp(elevio.BT_HallUp, f, o.Up[f])
-				elevio.SetButtonLamp(elevio.BT_HallDown, f, o.Down[f])
-			}
-		}
-	}
-}
 
 func InitializeElevator(addr string,
 						numFloors int,
@@ -56,11 +36,22 @@ func InitializeElevator(addr string,
 	}
 	elevhandler.SetEndstation(elevPt)
 	elevPt.Available = true
-	elevPt.TimeSinceClearedOrder = time.Now()
-	//elevPt.Timeout = false
-	//elevPt.IsConnected = true
-	fmt.Println(*elevPt)
+	elevPt.TimeSinceNewFloor = time.Now()
+	switch {
+	case elevPt.Endstation < elevPt.Floor:
+		elevio.SetMotorDirection(elevio.MD_Down)
+		elevPt.Direction = elevio.MD_Down
+		elevPt.State = elevhandler.ST_MovingDown
+	case elevPt.Endstation > elevPt.Floor:
+		elevio.SetMotorDirection(elevio.MD_Up)
+		elevPt.Direction = elevio.MD_Up
+		elevPt.State = elevhandler.ST_MovingUp
+	default:
+		elevio.SetMotorDirection(elevio.MD_Stop)
+		elevPt.Direction = elevio.MD_Stop
+		elevPt.State = elevhandler.ST_Idle
+	}
 
-	elevio.SetMotorDirection(elevio.MD_Stop)
+	fmt.Println(*elevPt)
 	fmt.Print("Initializing complete\n")
 }

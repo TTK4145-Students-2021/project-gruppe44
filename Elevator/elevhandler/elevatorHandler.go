@@ -9,6 +9,17 @@ import (
 
 var numFloors int = 4
 
+
+type ElevatorState int
+const (
+	ST_Idle   ElevatorState 	= 0
+	ST_MovingUp             	= 1
+	ST_MovingDown           	= 2
+	ST_StopUp					= 3
+	ST_StopDown 				= 4
+	ST_TimedOut 				= 5
+)
+
 type Orders struct {
 	Inside []bool /** < The inside panel orders*/
 	Up     []bool /** < The upwards orders from outside */
@@ -22,8 +33,9 @@ type ElevatorStatus struct {
 	//Timeout     			bool
 	//IsConnected 			bool
 	Orders      			Orders
-	TimeSinceClearedOrder 	time.Time
+	TimeSinceNewFloor	 	time.Time
 	Direction   			elevio.MotorDirection
+	State 					ElevatorState
 }
 
 type Elevator struct {
@@ -59,8 +71,9 @@ func RemoveOrder(elevPt *ElevatorStatus, order elevio.ButtonEvent){
 
 //ElevatorGetEndstation returns endstation
 func SetEndstation(elevPt *ElevatorStatus) {
+	elevPt.Endstation = elevPt.Floor
 	switch elevPt.Direction {
-	case elevio.MD_Down: //skiftet down og up
+	case elevio.MD_Down:
 		for f := numFloors - 1; f >= 0; f-- {
 			if elevPt.Orders.Inside[f] || elevPt.Orders.Down[f] || elevPt.Orders.Up[f] {
 				elevPt.Endstation = f
@@ -87,6 +100,5 @@ func ClearOrdersAtFloor(elevPt *ElevatorStatus) {
 	if (elevPt.Direction == elevio.MD_Down) || (elevPt.Endstation == elevPt.Floor) {
 		elevPt.Orders.Down[elevPt.Floor] = false
 	}
-	elevPt.TimeSinceClearedOrder = time.Now()
 	SetEndstation(elevPt)
 }

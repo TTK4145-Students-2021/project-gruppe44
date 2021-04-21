@@ -88,17 +88,22 @@ func DistanceBetweenFloors(floor1, floor2 int) int {
 }
 
 
-func timeoutCheck(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *AllOrders, timeout chan<- string){
-	timeLimit := 20 * time.Second
-
-
+func timeoutCheck(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *AllOrders, myID string, timeout chan<- string){
+	timeLimit := 20 * time.Second //FIX random number
 
 	for{
 		time.Sleep(time.Second) //FIX random number
 		for f := 0; f < len(ordersPt.Down); f++{
+			myElev := elevMap[myID]
+			if myElev.Orders.Inside[f]{
+				if time.Now().After(myElev.TimeSinceNewFloor.Add(timeLimit)){
+					timeout <- myID
+				}
+			}
+
 			if (ordersPt.Down[f].ID != "") && time.Now().After(ordersPt.Down[f].TimeStarted.Add(timeLimit)){
 				if elev, ok := elevMap[ordersPt.Down[f].ID]; ok{
-					if time.Now().After(elev.TimeSinceClearedOrder.Add(timeLimit)){
+					if time.Now().After(elev.TimeSinceNewFloor.Add(timeLimit)){
 						timeout <- ordersPt.Down[f].ID
 					}
 				} else{
@@ -107,7 +112,7 @@ func timeoutCheck(elevMap map[string]elevhandler.ElevatorStatus, ordersPt *AllOr
 			}
 			if (ordersPt.Up[f].ID != "") && time.Now().After(ordersPt.Up[f].TimeStarted.Add(timeLimit)){
 				if elev, ok := elevMap[ordersPt.Up[f].ID]; ok{
-					if time.Now().After(elev.TimeSinceClearedOrder.Add(timeLimit)){
+					if time.Now().After(elev.TimeSinceNewFloor.Add(timeLimit)){
 						timeout <- ordersPt.Up[f].ID
 					}
 				} else{
@@ -229,7 +234,7 @@ func OrderHandlerFSM(myID string,
 	Init(myID, ordersPt, elevInit)
 	//go updateOrderLights(ordersPt) FIX
 	elevTimedOut := make(chan string)
-	go timeoutCheck(elevMap, ordersPt, elevTimedOut) 
+	go timeoutCheck(elevMap, ordersPt, myID, elevTimedOut) 
 	for {
 		// ordersTemp := *ordersPt
 		select {
@@ -320,8 +325,8 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	fmt.Println("Got order request")
 	minCost := 1000000000000000000 //Big number so that the first cost is lower, couldn't use math.Inf(1) because of different types. Fix this
 	
-	var chosenElev string
-	//chosenElev := "NO ELEVATOR"
+	//var chosenElev string
+	chosenElev := myID
 	//sorted ids to make sure every elevator chooses the same elev when cost is the same.
 	ids := make([]string, 0, len(elevMap))
 	for id := range elevMap {
@@ -354,8 +359,8 @@ func ChooseElevator(elevMap map[string]elevhandler.ElevatorStatus,
 	} else {
 		fmt.Println("Didn't take order")
 	}
-	fmt.Print("Current order list: ")
-	fmt.Println(*ordersPt)
+	//fmt.Print("Current order list: ")
+	//fmt.Println(*ordersPt)
 }
 
 // When an order confirmation is recieved, this function will set that order as confirmed.
@@ -473,6 +478,6 @@ func ClearOrder(ordersPt *AllOrders, order elevio.ButtonEvent) {
 		ordersPt.Down[order.Floor].Confirmed = false
 	}
 	fmt.Println("Cleared order")
-	fmt.Print("Current order list: ")
-	fmt.Println(*ordersPt)
+	//fmt.Print("Current order list: ")
+	//fmt.Println(*ordersPt)
 }

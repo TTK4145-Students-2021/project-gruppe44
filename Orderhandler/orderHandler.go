@@ -193,7 +193,7 @@ func OrderHandlerFSM(myID string,
 	elevTimedOut := make(chan string)
 
 	LoadFromFile(myID, numFloors, ordersPt, elevMap, elevInit)
-	go TimeoutCheck(elevMap, ordersPt, myID, elevTimedOut) 
+	go TimeoutCheck(elevMap, ordersPt, myID, elevTimedOut)
 	
 	for {
 		select {

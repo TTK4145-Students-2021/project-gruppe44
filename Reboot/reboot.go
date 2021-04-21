@@ -33,8 +33,8 @@ func backupPhase() int {
 		}
 		countOld = countNew
 	}
-
 }
+
 func primaryPhase(count int, addr string, id string) {
 	fmt.Println("--- Primary phase ---")
 	fmt.Println("... creating new backup")

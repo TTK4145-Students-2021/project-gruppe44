@@ -11,7 +11,7 @@ import (
 	"./Network"
 	"./Network/localip"
 	"./Orderhandler"
-	"./reboot"
+	"./Reboot"
 )
 
 func main() {

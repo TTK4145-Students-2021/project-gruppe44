@@ -59,7 +59,9 @@ func ElevatorFSM(id string,
 
 	doorOpen	:= make(chan bool)
 	doorTimeout := make(chan bool)
+	go doorTimer(elevPt.State, drv_obstr, doorTimeout, doorOpen)
 	
+
 	for {
 		select {
 		case <- doorOpen:
@@ -99,7 +101,7 @@ func onNewOrder(elevPt *elevhandler.ElevatorStatus, order elevio.ButtonEvent){
 			elevPt.State	 = elevhandler.ST_MovingUp
 			fmt.Println("State: MovingUp")
 		
-			case elevPt.Endstation == elevPt.Floor:
+		case elevPt.Endstation == elevPt.Floor:
 			if elevPt.Orders.Inside[elevPt.Floor] || elevPt.Orders.Down[elevPt.Floor] {
 				elevPt.Direction = elevio.MD_Down
 				elevPt.State	 = elevhandler.ST_StopDown
